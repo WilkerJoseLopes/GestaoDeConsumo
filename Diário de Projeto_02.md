@@ -1,14 +1,11 @@
- # Este link conduz a um documento Google Docs onde está reunida toda a informação sobre o nosso projeto.
+## 📄 Documentação Completa do Projeto  
+*(Link para o Google Docs com todos os detalhes)*  
 
- Neste documento, você encontrará:
- - Descrições detalhadas
- - Registros de progresso
- - Decisões tomadas
- - Outros dados relevantes que ilustram o percurso do trabalho desenvolvido
+🔗 **[Acessar Documento Completo]([LINK_DO_SEU_GOOGLE_DOCS_AQUI](https://docs.google.com/document/d/1EG7OtlMjdvNs43Q2vH6V4-s4NddUcvcaw1VI1k_O9N0/edit?usp=sharing))**  
+### O Que Você Encontrará Aqui:  
+✔ **Descrições detalhadas** do projeto e objetivos.  
+✔ **Registros de progresso** atualizados (sprints, tarefas concluídas).  
+✔ **Decisões importantes** tomadas pela equipa.  
+✔ **Dados técnicos** (arquitetura, tecnologias usadas).  
+✔ **Relatórios** (testes, erros corrigidos, próximos passos).  
 
- A consulta deste documento permite:
- - Acompanhar de perto a evolução do projeto
- - Compreender cada etapa realizada
- - Ter uma visão clara e organizada de todo o processo
-
- [📄 Acesse o documento completo no Google Docs](https://docs.google.com/document/d/1EG7OtlMjdvNs43Q2vH6V4-s4NddUcvcaw1VI1k_O9N0/edit?usp=sharing)
