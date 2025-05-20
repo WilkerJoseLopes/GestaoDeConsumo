@@ -1,8 +1,8 @@
 > **ℹ️ Este link conduz a um documento Google Docs onde está reunida toda a informação essencial sobre o nosso projeto.**
 >
-> Neste documento, poderá encontrar:
+> Neste documento, você encontrará:
 > - Descrições detalhadas
-> - Registos de progresso
+> - Registros de progresso
 > - Decisões tomadas
 > - Outros dados relevantes que ilustram o percurso do trabalho desenvolvido
 >
