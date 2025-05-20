@@ -3,8 +3,8 @@ import pandas as pd
 
 app = Flask(__name__)
 
-CAMINHO_EXCEL = "fonte/dados.xlsx"
-CHAVE_CORRETA = "acesso123"
+CAMINHO_EXCEL = "fonte/Gestão de consumos de água, energia e gás.xlsx"
+CHAVE_CORRETA = "123"
 
 def carregar_dados():
     # Lê as duas folhas
