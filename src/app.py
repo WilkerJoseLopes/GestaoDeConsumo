@@ -3,7 +3,7 @@ import pandas as pd
 
 app = Flask(__name__)
 
-CAMINHO_EXCEL = "fonte/Gestão de consumos de água, energia e gás.xlsx"
+CAMINHO_EXCEL = "src/Gestão de consumos de água, energia e gás.xlsx"
 CHAVE_CORRETA = "123"
 
 def carregar_dados():
@@ -21,7 +21,7 @@ def carregar_dados():
 
 @app.route("/")
 def home():
-    return "🌐 Projeto 2 - Gestão de Consumos | Rotas: /resumo, /detalhe?id=&chave="
+    return "Projeto 2 - Gestão de Consumos | Rotas: /resumo, /detalhe?id=&chave="
 
 @app.route("/resumo")
 def rota_resumo():
