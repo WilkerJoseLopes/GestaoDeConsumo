@@ -1,4 +1,4 @@
- **ℹ️ Este link conduz a um documento Google Docs onde está reunida toda a informação essencial sobre o nosso projeto.**
+ #ℹ️ Este link conduz a um documento Google Docs onde está reunida toda a informação essencial sobre o nosso projeto.
 
  Neste documento, você encontrará:
  - Descrições detalhadas
