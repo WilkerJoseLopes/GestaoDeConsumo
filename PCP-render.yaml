@@ -1,0 +1,14 @@
+# Exported from Render on 2025-05-21T12:34:41Z
+services:
+- type: web
+  name: Projeto2G3
+  runtime: python
+  repo: https://github.com/WilkerJoseLopes/Projeto2G3
+  plan: free
+  region: frankfurt
+  buildCommand: pip install --upgrade pip; pip install -r requirements.txt
+  startCommand: export PATH=$PATH:/usr/local/python3/bin && pip install gunicorn &&
+    gunicorn app:app -t 130 --keep-alive 60
+  autoDeployTrigger: commit
+  rootDir: src
+version: "1"
