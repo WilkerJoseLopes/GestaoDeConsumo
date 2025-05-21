@@ -3,20 +3,23 @@ import pandas as pd
 
 app = Flask(__name__)
 
-# Links diretos para CSV das folhas do Google Sheets
-LINK_CASAS = "https://docs.google.com/spreadsheets/d/1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w/edit?gid=0#gid=0"
-LINK_CONSUMOS = "https://docs.google.com/spreadsheets/d/1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w/edit?gid=634466147#gid=634466147"
+LINK_CASAS = "https://docs.google.com/spreadsheets/d/1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w/export?format=csv&gid=0"
+LINK_CONSUMOS = "https://docs.google.com/spreadsheets/d/1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w/export?format=csv&gid=634466147"
 CHAVE_CORRETA = "123"
 
 def carregar_dados():
-    casas = pd.read_csv(LINK_CASAS)
-    consumos = pd.read_csv(LINK_CONSUMOS)
+    try:
+        casas = pd.read_csv(LINK_CASAS)
+        consumos = pd.read_csv(LINK_CONSUMOS)
 
-    casas.columns = ["id", "descricao", "morada", "certificado"]
-    consumos.columns = ["id", "localizacao", "tipo", "periodo", "valor", "unidade", "custo"]
+        casas.columns = ["id", "descricao", "morada", "latitude", "longitude", "certificado"]
+        consumos.columns = ["id", "tipo", "periodo", "valor", "unidade", "custo"]
 
-    df = pd.merge(consumos, casas, on="id", how="left")
-    return df
+        df = pd.merge(consumos, casas, on="id", how="left")
+        return df
+    except Exception as e:
+        print(f"Erro ao carregar dados: {e}")
+        return pd.DataFrame()
 
 @app.route("/")
 def home():
@@ -25,9 +28,17 @@ def home():
 @app.route("/resumo")
 def rota_resumo():
     df = carregar_dados()
-    resumo = df.groupby(['id', 'descricao', 'morada', 'certificado']) \
-               .agg(total_consumo=('valor', 'sum'), total_custo=('custo', 'sum')) \
+    if df.empty:
+        return jsonify({"erro": "Não foi possível carregar os dados"}), 500
+        
+    resumo = df.groupby(['id', 'descricao', 'morada', 'latitude', 'longitude', 'certificado']) \
+               .agg(
+                   total_consumo=('valor', 'sum'),
+                   total_custo=('custo', 'sum'),
+                   tipos_consumo=('tipo', lambda x: list(x.unique()))
+               ) \
                .reset_index()
+    
     return jsonify(resumo.to_dict(orient="records"))
 
 @app.route("/detalhe")
@@ -39,6 +50,9 @@ def rota_detalhe():
         return jsonify({"erro": "Chave de acesso inválida"}), 403
 
     df = carregar_dados()
+    if df.empty:
+        return jsonify({"erro": "Não foi possível carregar os dados"}), 500
+
     dados_filtrados = df[df["id"].astype(str) == str(id_requisitado)]
 
     if dados_filtrados.empty:
@@ -48,4 +62,3 @@ def rota_detalhe():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
