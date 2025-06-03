@@ -1,4 +1,5 @@
 import os
+import json
 import gspread
 from flask import Flask, request, redirect, url_for
 from google.oauth2.service_account import Credentials
@@ -6,11 +7,8 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Configurações do Google Sheets
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SERVICE_ACCOUNT_FILE = 'service_account.json'  # Certifique-se de ter este arquivo no seu projeto
 
-# Template HTML corrigido (substitua com seu template real)
 HTML_BASE = """
 <!DOCTYPE html>
 <html>
@@ -35,7 +33,14 @@ HTML_BASE = """
 
 def get_google_sheet():
     try:
-        creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+        # Obtém as credenciais da variável de ambiente
+        credentials_json = os.getenv("GOOGLE_CREDENTIALS")
+        if not credentials_json:
+            raise ValueError("Variável GOOGLE_CREDENTIALS não encontrada!")
+        
+        credentials_dict = json.loads(credentials_json)
+        creds = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
+        
         client = gspread.authorize(creds)
         sheet = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w").sheet1
         return sheet
