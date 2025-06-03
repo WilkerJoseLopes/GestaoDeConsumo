@@ -1,135 +1,105 @@
 import os
-import pygsheets
-from flask import Flask, request, redirect, jsonify
+import gspread
+from flask import Flask, request, redirect, url_for
+from google.oauth2.service_account import Credentials
 from datetime import datetime
-from io import StringIO
 
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'segredo-default')
 
-# Configuração do Google Sheets
-SPREADSHEET_ID = "1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w"
-SHEET_NAME = "Dados"
+# Configurações do Google Sheets
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+SERVICE_ACCOUNT_FILE = 'service_account.json'  # Certifique-se de ter este arquivo no seu projeto
 
-# Autenticação simplificada com tratamento robusto
-def get_sheet():
-    try:
-        gc = pygsheets.authorize(service_account_env_var='GOOGLE_CREDENTIALS')
-        sh = gc.open_by_key(SPREADSHEET_ID)
-        return sh.worksheet_by_title(SHEET_NAME)
-    except Exception as e:
-        print(f"ERRO: {str(e)}")
-        return None
-
-# HTML embutido diretamente no código
+# Template HTML corrigido (substitua com seu template real)
 HTML_BASE = """
 <!DOCTYPE html>
 <html>
 <head>
     <title>Gestão de Consumo</title>
     <style>
-        body { font-family: Arial; max-width: 800px; margin: 0 auto; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%%; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        tr:nth-child(even) { background-color: #f2f2f2; }
-        .alert { padding: 10px; margin: 10px 0; border-radius: 4px; }
-        .success { background-color: #dff0d8; color: #3c763d; }
-        .error { background-color: #f2dede; color: #a94442; }
+        th { background-color: #f2f2f2; }
+        form { margin: 20px 0; }
+        input, button { padding: 8px; margin: 5px 0; }
     </style>
 </head>
 <body>
     <h1>Gestão de Consumo</h1>
-    {% if mensagem %}<div class="alert {{ mensagem.tipo }}">{{ mensagem.texto }}</div>{% endif %}
     %s
 </body>
 </html>
 """
 
-HTML_FORM = """
-<form method="POST" action="/add">
-    <h2>Adicionar Registro</h2>
-    <input type="date" name="data" required placeholder="Data">
-    <input type="text" name="item" required placeholder="Item">
-    <input type="number" step="0.01" name="valor" required placeholder="Valor">
-    <input type="text" name="categoria" required placeholder="Categoria">
-    <button type="submit">Salvar</button>
-</form>
-"""
+def get_google_sheet():
+    try:
+        creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+        client = gspread.authorize(creds)
+        sheet = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w").sheet1
+        return sheet
+    except Exception as e:
+        print(f"ERRO: {e}")
+        return None
 
-# Rotas principais
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def dashboard():
-    sheet = get_sheet()
-    if not sheet:
-        return HTML_BASE % "<h2>Erro: Não foi possível conectar ao Google Sheets</h2>"
-    
     try:
+        sheet = get_google_sheet()
+        if not sheet:
+            return HTML_BASE % "<h2>Erro: Não foi possível conectar ao Google Sheets</h2>"
+
+        if request.method == 'POST':
+            produto = request.form['produto']
+            quantidade = request.form['quantidade']
+            preco = request.form['preco']
+            data = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            sheet.append_row([produto, quantidade, preco, data])
+            return redirect(url_for('dashboard'))
+
         registros = sheet.get_all_records()
-        # Processamento em memória
-        total = sum(float(r.get('Valor', 0)) for r in registros)
-        
-        # Gerar HTML dinamicamente
-        table_rows = []
-        for r in registros[-10:]:  # Últimos 10 registros
-            table_rows.append(f"""
-            <tr>
-                <td>{r.get('Data', '')}</td>
-                <td>{r.get('Item', '')}</td>
-                <td>R$ {float(r.get('Valor', 0)):.2f}</td>
-                <td>{r.get('Categoria', '')}</td>
-            </tr>
-            """)
-        
-        content = f"""
-        <h2>Total: R$ {total:.2f}</h2>
+        tabela = """
+        <form method="POST">
+            <input type="text" name="produto" placeholder="Produto" required>
+            <input type="number" name="quantidade" placeholder="Quantidade" required>
+            <input type="number" step="0.01" name="preco" placeholder="Preço" required>
+            <button type="submit">Adicionar</button>
+        </form>
         <table>
-            <tr><th>Data</th><th>Item</th><th>Valor</th><th>Categoria</th></tr>
-            {''.join(table_rows)}
-        </table>
-        {HTML_FORM}
+            <tr>
+                <th>Produto</th>
+                <th>Quantidade</th>
+                <th>Preço</th>
+                <th>Data</th>
+            </tr>
         """
-        return HTML_BASE % content
         
-    except Exception as e:
-        return HTML_BASE % f"<h2>Erro ao processar dados: {str(e)}</h2>"
+        for registro in registros:
+            tabela += f"""
+            <tr>
+                <td>{registro.get('Produto', '')}</td>
+                <td>{registro.get('Quantidade', '')}</td>
+                <td>{registro.get('Preço', '')}</td>
+                <td>{registro.get('Data', '')}</td>
+            </tr>
+            """
+        
+        tabela += "</table>"
+        return HTML_BASE % tabela
 
-@app.route('/add', methods=['POST'])
-def add_registro():
-    sheet = get_sheet()
-    if not sheet:
-        return redirect('/?erro=Conexão+com+planilha+indisponível')
-    
-    try:
-        novo_registro = [
-            request.form['data'],
-            request.form['item'],
-            float(request.form['valor']),
-            request.form['categoria'],
-            datetime.now().strftime("%d/%m/%Y %H:%M")
-        ]
-        sheet.append_table(values=novo_registro)
-        return redirect('/?sucesso=Registro+adicionado')
     except Exception as e:
-        return redirect(f'/?erro={str(e)}')
+        error_message = f"<h2>Erro: {str(e)}</h2>"
+        if "SERVICE_DISABLED" in str(e):
+            error_message += """
+            <p>Google Sheets API não está ativada. Ative-a <a href="https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=372923049757" target="_blank">aqui</a>.</p>
+            """
+        return HTML_BASE % error_message
 
-# API simplificada
-@app.route('/api/data')
-def api_data():
-    sheet = get_sheet()
-    if not sheet:
-        return jsonify({"error": "Sheet connection failed"}), 500
-    
-    registros = sheet.get_all_records()
-    return jsonify({
-        "data": [
-            {
-                "data": r.get('Data'),
-                "valor": float(r.get('Valor', 0)),
-                "categoria": r.get('Categoria')
-            } for r in registros
-        ]
-    })
+@app.route('/health')
+def health():
+    return "OK", 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True)
