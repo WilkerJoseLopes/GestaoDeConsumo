@@ -5,7 +5,7 @@ Este projeto é a segunda parte de projeto interativo focado no monitoramento e 
 
 Nesta fase, o foco foi a implementação de um mapa interativo hospedado no Render, onde estão representadas as residências monitoradas. Ao clicar em cada casa no mapa, o usuário pode visualizar dados detalhados de consumo e valores atuais, além de informações específicas de cada recurso (água, energia, gás).
 
-### O que encontrará aqui:  
+# O que encontrará aqui:  
 ✔ **Descrições detalhadas** do projeto e objetivos.  
 ✔ **Registros de progresso** atualizados (sprints, tarefas concluídas).  
 ✔ **Decisões importantes** tomadas pela equipa.  
