@@ -1,4 +1,4 @@
-# Gestão de consumo Gás, Energia e Água
+# Gestão de Consumo Gás, Energia e Água
 
 # Sobre o Projeto 📝
 Este projeto é a segunda parte de projeto interativo focado no monitoramento e visualização de consumos de água, energia e gás em residências. Tem como objetivo a gestão desses recursos. 
