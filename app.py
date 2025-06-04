@@ -13,7 +13,7 @@ HTML_BASE = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Gestão de Consumo</title>
+    <title>Controle de Gastos</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         h1 { color: #333; }
@@ -25,7 +25,7 @@ HTML_BASE = """
     </style>
 </head>
 <body>
-    <h1>Gestão de Consumo</h1>
+    <h1>Controle de Gastos</h1>
     %s
 </body>
 </html>
