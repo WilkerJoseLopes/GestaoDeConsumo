@@ -12,7 +12,10 @@ Nesta fase, o foco foi a implementação de um mapa interativo hospedado no Rend
 ✔ **Dados técnicos** (arquitetura, tecnologias usadas).  
 ✔ **Relatórios** (testes, erros corrigidos, próximos passos).  
 
-📄 Documentação Completa do Projeto   🔗 **[Acessar Documento Completo do Segundo Projeto](https://docs.google.com/document/d/1EG7OtlMjdvNs43Q2vH6V4-s4NddUcvcaw1VI1k_O9N0/edit?usp=sharing)**  
+📄 Documentação Completa do Projeto   🔗 **[Acessar Documento Completo do Segundo Projeto](https://docs.google.com/document/d/1EG7OtlMjdvNs43Q2vH6V4-s4NddUcvcaw1VI1k_O9N0/edit?usp=sharing)** 
+
+📄 Link do google Sheets 🔗 **[Acessar o google Sheets](https://docs.google.com/spreadsheets/d/1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w/edit?usp=sharing)** 
+
 
 
 # Sobre o Primeiro Projeto 📝
