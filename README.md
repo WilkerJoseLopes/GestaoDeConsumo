@@ -1,5 +1,15 @@
 # Gestão de Consumo Gás, Energia e Água
 
+Desenvolvido pelo Grupo 3:
+David Duarte,
+Danilson Gonçalves,
+Wilker Lopes
+e Rafael Fortes.
+
+Displina: Metodologias Ágeis de Desenvolvimento de Software 
+
+Curso: Tecnologias de informação, Web e Multimédia – 2º ano
+
 # Sobre o Projeto 📝
 Este projeto é a segunda parte de projeto interativo focado no monitoramento e visualização de consumos de água, energia e gás em residências. Tem como objetivo a gestão desses recursos. 
 
