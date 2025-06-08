@@ -45,16 +45,6 @@ HTML_TEMPLATE = """
             {casa_dados}
         ];
 
-        // Adiciona marcadores
-        casas.forEach(casa => {
-            const cor = casa.certificado === 'A+' ? 'green' :
-                        casa.certificado === 'A'  ? 'blue' :
-                        casa.certificado === 'B+' ? 'orange' :
-                        casa.certificado === 'B'  ? 'orange' :
-                        casa.certificado === 'B-' ? 'darkorange' :
-                        casa.certificado === 'C+' ? 'red' :
-                        'gray';
-
             const icone = L.icon({
                 iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
                 shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
