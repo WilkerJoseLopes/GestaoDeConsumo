@@ -56,10 +56,11 @@ HTML_TEMPLATE = """
                         'gray';
 
             const icone = L.icon({
-                iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${cor}.png`,
+                iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
                 iconSize: [25, 41],
                 iconAnchor: [12, 41],
-                popupAnchor: [0, -30]
+                popupAnchor: [0, -30],
+                shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
             });
 
             L.marker([casa.lat, casa.lng], { icon: icone })
