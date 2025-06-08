@@ -57,10 +57,10 @@ HTML_TEMPLATE = """
 
             const icone = L.icon({
                 iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+                shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
                 iconSize: [25, 41],
                 iconAnchor: [12, 41],
-                popupAnchor: [0, -30],
-                shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
+                popupAnchor: [0, -30]
             });
 
             L.marker([casa.lat, casa.lng], { icon: icone })
