@@ -1,7 +1,7 @@
 import os
 import json
 import gspread
-from flask import Flask
+from flask import Flask, render_template_string
 from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
@@ -17,7 +17,7 @@ planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
 folha_casa = planilha.worksheet("Dados Casa")
 folha_consumos = planilha.worksheet("Dados Consumos")
 
-# HTML com mapa dinâmico
+# Template HTML com Jinja2
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -35,23 +35,21 @@ HTML_TEMPLATE = """
 </head>
 <body>
     <h1>Gestão de Consumo</h1>
-    
+
     <!-- Mapa -->
     <div id="map"></div>
-    
+
     <!-- Tabelas -->
     <div class="tabela-container">
         <h2>Dados Casa</h2>
         {{ tabela_casa|safe }}
     </div>
-    
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inicializa o mapa (centrado no Porto)
         const map = L.map('map').setView([41.1578, -8.6291], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        // Dados das casas (extraídos da tabela)
         const casas = [
             {% for casa in casas %}
             {
@@ -64,11 +62,10 @@ HTML_TEMPLATE = """
             {% endfor %}
         ];
 
-        // Adiciona marcadores para cada casa
         casas.forEach(casa => {
             const cor = casa.certificado === 'A+' ? 'green' : 
                        casa.certificado === 'A' ? 'blue' : 'orange';
-            
+
             const icone = L.icon({
                 iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${cor}.png`,
                 iconSize: [25, 41],
@@ -89,7 +86,6 @@ HTML_TEMPLATE = """
 """
 
 def formatar_dados(dados):
-    """Converte dados da planilha em tabela HTML."""
     if not dados:
         return "<p>Nenhum dado encontrado.</p>"
     
@@ -109,23 +105,17 @@ def formatar_dados(dados):
 @app.route('/')
 def home():
     dados_casa = folha_casa.get_all_records()
-    
-    # Filtra apenas linhas com latitude/longitude válidos
     casas_validas = [
         casa for casa in dados_casa 
         if isinstance(casa.get('Latitude'), (float, int)) and 
            isinstance(casa.get('Longitude'), (float, int))
     ]
-    
-    return HTML_TEMPLATE.replace("{{ tabela_casa|safe }}", formatar_dados(dados_casa)) \
-                       .replace("{% for casa in casas %}", "") \
-                       .replace("{% endfor %}", "") \
-                       .replace("{{ casa['Descrição'] }}", "{casa['Descrição']}") \
-                       .replace("{{ casa['Morada'] }}", "{casa['Morada']}") \
-                       .replace("{{ casa['Latitude'] }}", "{casa['Latitude']}") \
-                       .replace("{{ casa['Longitude'] }}", "{casa['Longitude']}") \
-                       .replace("{{ casa['Certificado Energético'] }}", "{casa['Certificado Energético']}") \
-                       .format(casas=casas_validas)
+
+    return render_template_string(
+        HTML_TEMPLATE,
+        tabela_casa=formatar_dados(dados_casa),
+        casas=casas_validas
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
