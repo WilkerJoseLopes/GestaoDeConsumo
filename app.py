@@ -1,7 +1,7 @@
 import os
 import json
 import gspread
-from flask import Flask, render_template_string
+from flask import Flask
 from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
@@ -15,9 +15,8 @@ client = gspread.authorize(creds)
 # Abre a planilha
 planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
 folha_casa = planilha.worksheet("Dados Casa")
-folha_consumos = planilha.worksheet("Dados Consumos")
 
-# Template HTML com Jinja2
+# HTML com mapa dinâmico (sem tabelas)
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -26,11 +25,7 @@ HTML_TEMPLATE = """
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body { font-family: Arial; margin: 20px; }
-        table { border-collapse: collapse; width: 80%; margin: 20px auto; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .tabela-container { margin-bottom: 40px; }
-        #map { height: 500px; width: 90%; margin: 20px auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        #map { height: 500px; width: 90%; margin: 0 auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -39,37 +34,32 @@ HTML_TEMPLATE = """
     <!-- Mapa -->
     <div id="map"></div>
 
-    <!-- Tabelas -->
-    <div class="tabela-container">
-        <h2>Dados Casa</h2>
-        {{ tabela_casa|safe }}
-    </div>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // Inicializa o mapa (centrado no Porto)
         const map = L.map('map').setView([41.1578, -8.6291], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
+        // Dados das casas (extraídos da planilha)
         const casas = [
-            {% for casa in casas %}
-            {
-                descricao: "{{ casa['Descrição'] }}",
-                morada: "{{ casa['Morada'] }}",
-                lat: {{ casa['Latitude'] }},
-                lng: {{ casa['Longitude'] }},
-                certificado: "{{ casa['Certificado Energético'] }}"
-            },
-            {% endfor %}
+            {casa_dados}
         ];
 
+        // Adiciona marcadores
         casas.forEach(casa => {
-            const cor = casa.certificado === 'A+' ? 'green' : 
-                       casa.certificado === 'A' ? 'blue' : 'orange';
+            const cor = casa.certificado === 'A+' ? 'green' :
+                        casa.certificado === 'A'  ? 'blue' :
+                        casa.certificado === 'B+' ? 'orange' :
+                        casa.certificado === 'B'  ? 'orange' :
+                        casa.certificado === 'B-' ? 'darkorange' :
+                        casa.certificado === 'C+' ? 'red' :
+                        'gray';
 
             const icone = L.icon({
                 iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${cor}.png`,
                 iconSize: [25, 41],
-                iconAnchor: [12, 41]
+                iconAnchor: [12, 41],
+                popupAnchor: [0, -30]
             });
 
             L.marker([casa.lat, casa.lng], { icon: icone })
@@ -85,37 +75,35 @@ HTML_TEMPLATE = """
 </html>
 """
 
-def formatar_dados(dados):
-    if not dados:
-        return "<p>Nenhum dado encontrado.</p>"
-    
-    tabela_html = "<table><tr>"
-    for chave in dados[0].keys():
-        tabela_html += f"<th>{chave}</th>"
-    tabela_html += "</tr>"
-    
-    for linha in dados:
-        tabela_html += "<tr>"
-        for valor in linha.values():
-            tabela_html += f"<td>{valor}</td>"
-        tabela_html += "</tr>"
-    tabela_html += "</table>"
-    return tabela_html
-
 @app.route('/')
 def home():
     dados_casa = folha_casa.get_all_records()
-    casas_validas = [
-        casa for casa in dados_casa 
-        if isinstance(casa.get('Latitude'), (float, int)) and 
-           isinstance(casa.get('Longitude'), (float, int))
-    ]
 
-    return render_template_string(
-        HTML_TEMPLATE,
-        tabela_casa=formatar_dados(dados_casa),
-        casas=casas_validas
-    )
+    # Converte em objetos JS
+    casas_js = []
+    for casa in dados_casa:
+        try:
+            lat = float(casa.get("Latitude", ""))
+            lng = float(casa.get("Longitude", ""))
+            descricao = casa.get("Descrição", "")
+            morada = casa.get("Morada", "")
+            cert = casa.get("Certificado Energético", "")
+
+            casas_js.append(
+                f"""{{
+                    descricao: "{descricao}",
+                    morada: "{morada}",
+                    lat: {lat},
+                    lng: {lng},
+                    certificado: "{cert}"
+                }}"""
+            )
+        except (ValueError, TypeError):
+            continue
+
+    casas_str = ",\n            ".join(casas_js)
+
+    return HTML_TEMPLATE.replace("{casa_dados}", casas_str)
 
 if __name__ == '__main__':
     app.run(debug=True)
