@@ -281,10 +281,10 @@ HTML_TEMPLATE = """
 
     function adicionarMarcador() {
         const lat = parseFloat(document.getElementById('latitude').value);
-        const lng = parseFloat(document.getElementById('longitude').value);
+        const lon = parseFloat(document.getElementById('longitude').value);
 
-        if (isNaN(lat) || isNaN(lng)) {
-            alert("Por favor, insira valores válidos para latitude e longitude.");
+        if (isNaN(lat) || isNaN(lon)) {
+            alert('Por favor, insira coordenadas válidas.');
             return;
         }
 
@@ -292,38 +292,107 @@ HTML_TEMPLATE = """
             map.removeLayer(marcadorUsuario);
         }
 
-        marcadorUsuario = L.marker([lat, lng]).addTo(map);
+        marcadorUsuario = L.marker([lat, lon]).addTo(map);
 
-        marcadorUsuario.bindPopup(
-            `<div id="popup-content">
-                <strong>Minha Casa</strong><br>
-                Latitude: ${lat}<br>
-                Longitude: ${lng}<br><br>
-                <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
-                <div id="input-codigo-container" style="margin-top: 10px; display: none;">
-                    <input type="text" id="codigo-casa" placeholder="Introduza o código">
-                </div>
-            </div>`
-        ).openPopup();
+        // Conteúdo do popup com botão que chama função JS separada para funcionar bem
+        const popupContent = document.createElement('div');
+        popupContent.innerHTML = `
+            <h3>Minha casa</h3>
+            <p>Está aqui.</p>
+        `;
 
-        map.setView([lat, lng], 16);
+        // Criar botão dinamicamente para funcionar dentro do popup
+        const btnCodigo = document.createElement('button');
+        btnCodigo.textContent = 'Introduzir Código do Proprietário';
+        btnCodigo.style.marginTop = '10px';
+        btnCodigo.onclick = mostrarInputCodigo;
+
+        popupContent.appendChild(btnCodigo);
+
+        marcadorUsuario.bindPopup(popupContent).openPopup();
+
+        map.setView([lat, lon], 18);
     }
 
     function mostrarInputCodigo() {
-        const container = document.getElementById("input-codigo-container");
-        if (container) {
-            container.style.display = "block";
+        const divInput = document.getElementById('input-codigo');
+        if (!divInput) {
+            // Criar input e botão dinamicamente
+            const inputDiv = document.createElement('div');
+            inputDiv.id = 'input-codigo';
+            inputDiv.style.marginTop = '10px';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.id = 'codigo-proprietario';
+            input.placeholder = 'Digite o código do proprietário';
+            input.style.marginRight = '6px';
+
+            const btnConfirmar = document.createElement('button');
+            btnConfirmar.textContent = 'Confirmar';
+            btnConfirmar.onclick = confirmarCodigo;
+
+            inputDiv.appendChild(input);
+            inputDiv.appendChild(btnConfirmar);
+
+            // Adiciona abaixo do botão já existente no popup
+            marcadorUsuario.getPopup().getContent().appendChild(inputDiv);
+
+            // Atualiza popup para mostrar novo conteúdo
+            marcadorUsuario.getPopup().update();
         }
     }
+
+    function confirmarCodigo() {
+        const codigo = document.getElementById('codigo-proprietario').value.trim();
+        if (codigo === '') {
+            alert('Por favor, insira o código do proprietário.');
+            return;
+        }
+
+        alert(`Código "${codigo}" recebido. Obrigado!`);
+    }
+
+    // Alternar tema claro/escuro
+    const btnToggleTheme = document.getElementById('btn-toggle-theme');
+    const iconSun = document.getElementById('icon-sun');
+    const iconMoon = document.getElementById('icon-moon');
+
+    // Função para salvar preferência no localStorage
+    function salvarPreferenciaTema(dark) {
+        localStorage.setItem('temaEscuro', dark ? 'true' : 'false');
+    }
+
+    // Função para aplicar tema
+    function aplicarTema(dark) {
+        if (dark) {
+            document.body.classList.add('dark-mode');
+            iconSun.style.display = 'inline';
+            iconMoon.style.display = 'none';
+        } else {
+            document.body.classList.remove('dark-mode');
+            iconSun.style.display = 'none';
+            iconMoon.style.display = 'inline';
+        }
+    }
+
+    // Detectar tema preferido e aplicar ao carregar
+    const temaEscuroSalvo = localStorage.getItem('temaEscuro') === 'true';
+    aplicarTema(temaEscuroSalvo);
+
+    btnToggleTheme.addEventListener('click', () => {
+        const modoAtualEscuro = document.body.classList.contains('dark-mode');
+        aplicarTema(!modoAtualEscuro);
+        salvarPreferenciaTema(!modoAtualEscuro);
+    });
 </script>
 </body>
 </html>
 """
 
-@app.route('/')
-def home():
-    folha_casa.get_all_records()
+@app.route("/")
+def index():
     return HTML_TEMPLATE
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
