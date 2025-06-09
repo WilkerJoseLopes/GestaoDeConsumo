@@ -12,11 +12,11 @@ GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
 creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
 client = gspread.authorize(creds)
 
-# Abre a planilha
+# Abre a planilha (mesmo que não use os dados agora)
 planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
 folha_casa = planilha.worksheet("Dados Casa")
 
-# HTML com mapa dinâmico (sem tabelas)
+# HTML com mapa vazio e formulário de coordenadas
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
@@ -24,52 +24,76 @@ HTML_TEMPLATE = """
     <title>Gestão de Consumo</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: Arial; margin: 20px; }
-        #map { height: 500px; width: 90%; margin: 0 auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
+        #map { height: 500px; width: 90%; margin: 20px auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        #form-coords { margin-top: 20px; }
+        input[type="number"] {
+            padding: 8px;
+            margin: 5px;
+            width: 150px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 8px 14px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
     <h1>Gestão de Consumo</h1>
+
+    <!-- Formulário para inserir coordenadas -->
+    <div id="form-coords">
+        <input type="number" id="latitude" step="any" placeholder="Latitude">
+        <input type="number" id="longitude" step="any" placeholder="Longitude">
+        <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
+    </div>
 
     <!-- Mapa -->
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inicializa o mapa (centrado no Porto)
+        // Inicializa o mapa centrado no Porto, sem marcadores
         const map = L.map('map').setView([41.1578, -8.6291], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        // Dados das casas (extraídos da planilha)
-        const casas = [
-            {casa_dados}
-        ];
+        let marcadorUsuario = null;
 
-        // Adiciona marcadores
-        casas.forEach(casa => {
-            const cor = casa.certificado === 'A+' ? 'green' :
-                        casa.certificado === 'A'  ? 'blue' :
-                        casa.certificado === 'B+' ? 'orange' :
-                        casa.certificado === 'B'  ? 'orange' :
-                        casa.certificado === 'B-' ? 'darkorange' :
-                        casa.certificado === 'C+' ? 'red' :
-                        'gray';
+        function adicionarMarcador() {
+            const lat = parseFloat(document.getElementById('latitude').value);
+            const lng = parseFloat(document.getElementById('longitude').value);
 
-            const icone = L.icon({
-                iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${cor}.png`,
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [0, -30]
-            });
+            if (isNaN(lat) || isNaN(lng)) {
+                alert("Por favor, insira valores válidos para latitude e longitude.");
+                return;
+            }
 
-            L.marker([casa.lat, casa.lng], { icon: icone })
+            // Remove marcador anterior (se houver)
+            if (marcadorUsuario) {
+                map.removeLayer(marcadorUsuario);
+            }
+
+            marcadorUsuario = L.marker([lat, lng])
                 .addTo(map)
                 .bindPopup(`
-                    <b>${casa.descricao}</b><br>
-                    ${casa.morada}<br>
-                    Certificado: <strong>${casa.certificado}</strong>
-                `);
-        });
+                    <b>Minha Casa</b><br>
+                    Latitude: ${lat}<br>
+                    Longitude: ${lng}<br><br>
+                    <button onclick="alert('Página da casa em construção...')">🔑 Aceder à Casa</button>
+                `)
+                .openPopup();
+
+            map.setView([lat, lng], 16);
+        }
     </script>
 </body>
 </html>
@@ -77,33 +101,9 @@ HTML_TEMPLATE = """
 
 @app.route('/')
 def home():
+    # Dados ainda são lidos, caso queira usar futuramente
     dados_casa = folha_casa.get_all_records()
-
-    # Converte em objetos JS
-    casas_js = []
-    for casa in dados_casa:
-        try:
-            lat = float(casa.get("Latitude", ""))
-            lng = float(casa.get("Longitude", ""))
-            descricao = casa.get("Descrição", "")
-            morada = casa.get("Morada", "")
-            cert = casa.get("Certificado Energético", "")
-
-            casas_js.append(
-                f"""{{
-                    descricao: "{descricao}",
-                    morada: "{morada}",
-                    lat: {lat},
-                    lng: {lng},
-                    certificado: "{cert}"
-                }}"""
-            )
-        except (ValueError, TypeError):
-            continue
-
-    casas_str = ",\n            ".join(casas_js)
-
-    return HTML_TEMPLATE.replace("{casa_dados}", casas_str)
+    return HTML_TEMPLATE
 
 if __name__ == '__main__':
     app.run(debug=True)
