@@ -6,7 +6,6 @@ from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
 
-# Configuração do Google Sheets
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
 creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
@@ -340,7 +339,7 @@ HTML_TEMPLATE = """
 
 @app.route('/')
 def home():
-    folha_casa.get_all_records()  # mantido para garantir que conecta, mesmo que não use diretamente aqui
+    folha_casa.get_all_records()  
     return HTML_TEMPLATE
 
 if __name__ == '__main__':
