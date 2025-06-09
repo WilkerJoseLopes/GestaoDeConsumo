@@ -23,8 +23,97 @@ geolocator = Nominatim(user_agent="gestor_casas")
 
 @app.route("/")
 def index():
-    with open("templates/index.html", encoding="utf-8") as f:
-        return f.read()
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Gestão de Consumo</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; }
+            .container { max-width: 800px; margin: 0 auto; }
+            .form-group { margin-bottom: 15px; }
+            label { display: block; margin-bottom: 5px; }
+            input { padding: 8px; width: 100%; box-sizing: border-box; }
+            button { padding: 10px 15px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+            button:hover { background: #45a049; }
+            #result { margin-top: 20px; padding: 10px; border: 1px solid #ddd; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Gestão de Consumo</h1>
+            
+            <div class="form-group">
+                <label for="latitude">Latitude:</label>
+                <input type="text" id="latitude" placeholder="Ex: 38.7223">
+            </div>
+            
+            <div class="form-group">
+                <label for="longitude">Longitude:</label>
+                <input type="text" id="longitude" placeholder="Ex: -9.1393">
+            </div>
+            
+            <button onclick="verificarCasa()">Verificar Casa</button>
+            
+            <div id="result"></div>
+            
+            <div id="acesso" style="display:none; margin-top: 20px;">
+                <div class="form-group">
+                    <label for="codigo">Código de Acesso:</label>
+                    <input type="password" id="codigo">
+                </div>
+                <button onclick="acessarCasa()">Acessar</button>
+            </div>
+            
+            <script>
+                function verificarCasa() {
+                    const latitude = document.getElementById('latitude').value;
+                    const longitude = document.getElementById('longitude').value;
+                    
+                    fetch('/verificar_coords', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ latitude, longitude })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const result = document.getElementById('result');
+                        if (data.erro) {
+                            result.innerHTML = `<p style="color:red">Erro: ${data.erro}</p>`;
+                            document.getElementById('acesso').style.display = 'none';
+                        } else {
+                            result.innerHTML = `<p style="color:green">${data.mensagem}</p>`;
+                            document.getElementById('acesso').style.display = 'block';
+                        }
+                    });
+                }
+                
+                function acessarCasa() {
+                    const latitude = document.getElementById('latitude').value;
+                    const longitude = document.getElementById('longitude').value;
+                    const codigo = document.getElementById('codigo').value;
+                    
+                    fetch('/aceder_casa', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ latitude, longitude, codigo })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const result = document.getElementById('result');
+                        if (data.erro) {
+                            result.innerHTML += `<p style="color:red">Erro: ${data.erro}</p>`;
+                        } else {
+                            result.innerHTML += `<p style="color:green">${data.mensagem} Proprietário: ${data.proprietario}</p>`;
+                        }
+                    });
+                }
+            </script>
+        </div>
+    </body>
+    </html>
+    """
 
 @app.route("/verificar_coords", methods=["POST"])
 def verificar_coords():
