@@ -9,7 +9,7 @@ app = Flask(__name__)
 # Configuração do Google Sheets
 # É crucial que a variável de ambiente 'GOOGLE_CREDENTIALS' esteja configurada
 # com o conteúdo do seu arquivo JSON de credenciais do serviço.
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"] # URL do escopo corrigida aqui!
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 try:
     GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
     creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
@@ -206,6 +206,15 @@ HTML_TEMPLATE = """
             box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
         }
 
+        /* Botão de debug */
+        #debug-button {
+            margin-top: 10px;
+            background-color: #f44336; /* Vermelho */
+        }
+        #debug-button:hover {
+            background-color: #d32f2f; /* Vermelho mais escuro */
+        }
+
         @media (max-width: 600px) {
             header {
                 flex-direction: column;
@@ -272,6 +281,7 @@ HTML_TEMPLATE = """
                 placeholder="Longitude"
             />
             <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
+            <button id="debug-button" onclick="forceMapResize()">Forçar Redimensionamento do Mapa</button>
         </div>
 
         <div id="map"></div>
@@ -286,6 +296,17 @@ HTML_TEMPLATE = """
 <script>
     let map; // Declarar 'map' fora para que seja acessível globalmente
 
+    // Função de depuração para forçar o redimensionamento do mapa
+    function forceMapResize() {
+        if (map) {
+            console.log("Forçando invalidateSize() do mapa...");
+            map.invalidateSize();
+            console.log("invalidateSize() chamado.");
+        } else {
+            console.warn("Não foi possível forçar o redimensionamento: mapa não está inicializado.");
+        }
+    }
+
     // Inicializa o mapa APÓS o DOM estar completamente carregado e analisado.
     document.addEventListener('DOMContentLoaded', function() {
         map = L.map('map').setView([41.1578, -8.6291], 12);
@@ -299,6 +320,14 @@ HTML_TEMPLATE = """
         // dentro de DOMContentLoaded. Isso é crucial para garantir que o Leaflet
         // calcule as dimensões corretamente após o CSS ser aplicado.
         map.invalidateSize();
+        console.log("Mapa inicializado e invalidateSize() chamado após DOMContentLoaded.");
+        const mapElement = document.getElementById('map');
+        if (mapElement) {
+            console.log(`Altura do elemento #map após DOMContentLoaded: ${mapElement.clientHeight}px`);
+        } else {
+            console.warn("Elemento #map não encontrado após DOMContentLoaded.");
+        }
+
 
         // Configuração inicial do ícone do tema
         const btnToggleTheme = document.getElementById('btn-toggle-theme');
@@ -325,8 +354,11 @@ HTML_TEMPLATE = """
             // Aumentado o atraso para garantir que as transições CSS do tema
             // tenham tempo para serem aplicadas antes do invalidateSize.
             setTimeout(() => {
-                if (map) map.invalidateSize(); // Verifica se o mapa foi inicializado
-            }, 350);
+                if (map) {
+                    map.invalidateSize(); // Verifica se o mapa foi inicializado
+                    console.log("invalidateSize() chamado após alteração do tema.");
+                }
+            }, 500); // Aumentado para 500ms
         });
     });
 
