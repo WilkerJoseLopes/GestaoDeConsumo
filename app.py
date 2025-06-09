@@ -13,7 +13,7 @@ creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
 client = gspread.authorize(creds)
 planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
 folha_casa = planilha.worksheet("Dados Casa")
-folha_prop = planilha.worksheet("Proprietarios")
+folha_prop = planilha.worksheet("Proprietários")  # <- CORREÇÃO AQUI ✅
 
 # Carregar dados de casa e proprietários
 dados_casas = folha_casa.get_all_records()
