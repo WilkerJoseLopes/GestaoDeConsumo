@@ -9,9 +9,7 @@ app = Flask(__name__)
 # Configuração do Google Sheets
 # É crucial que a variável de ambiente 'GOOGLE_CREDENTIALS' esteja configurada
 # com o conteúdo do seu arquivo JSON de credenciais do serviço.
-# Exemplo (em seu ambiente):
-# export GOOGLE_CREDENTIALS='{"type": "service_account", "project_id": "YOUR_PROJECT_ID", ...}'
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"] # URL do escopo corrigida aqui!
 try:
     GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
     creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
@@ -21,9 +19,6 @@ try:
     folha_casa = planilha.worksheet("Dados Casa")
 except Exception as e:
     print(f"Erro ao inicializar Google Sheets API: {e}")
-    # Trate o erro conforme a necessidade, talvez um fallback ou encerramento
-    # Para fins de demonstração, continuaremos sem a conexão com o Sheets,
-    # mas em produção você provavelmente desejaria um comportamento mais robusto.
     client = None
     planilha = None
     folha_casa = None
@@ -289,25 +284,61 @@ HTML_TEMPLATE = """
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // Inicializa o mapa centrado no Porto
-    const map = L.map('map').setView([41.1578, -8.6291], 12);
+    let map; // Declarar 'map' fora para que seja acessível globalmente
 
-    // Adiciona camada base OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    // Inicializa o mapa APÓS o DOM estar completamente carregado e analisado.
+    document.addEventListener('DOMContentLoaded', function() {
+        map = L.map('map').setView([41.1578, -8.6291], 12);
 
-    // Corrige o redimensionamento do mapa para evitar partes faltando
-    // Chamada inicial para garantir que o mapa se redimensione corretamente
-    // após o DOM estar completamente carregado e renderizado.
-    setTimeout(() => {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Chamar invalidateSize() imediatamente após a inicialização do mapa
+        // dentro de DOMContentLoaded. Isso é crucial para garantir que o Leaflet
+        // calcule as dimensões corretamente após o CSS ser aplicado.
         map.invalidateSize();
-    }, 100); // Um pequeno atraso garante que o elemento 'map' tenha suas dimensões finais
+
+        // Configuração inicial do ícone do tema
+        const btnToggleTheme = document.getElementById('btn-toggle-theme');
+        const iconSun = document.getElementById('icon-sun');
+        const iconMoon = document.getElementById('icon-moon');
+
+        if(document.body.classList.contains('dark-mode')) {
+            iconSun.style.display = 'inline';
+            iconMoon.style.display = 'none';
+        } else {
+            iconSun.style.display = 'none';
+            iconMoon.style.display = 'inline';
+        }
+
+        btnToggleTheme.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            if(document.body.classList.contains('dark-mode')) {
+                iconSun.style.display = 'inline';
+                iconMoon.style.display = 'none';
+            } else {
+                iconSun.style.display = 'none';
+                iconMoon.style.display = 'inline';
+            }
+            // Aumentado o atraso para garantir que as transições CSS do tema
+            // tenham tempo para serem aplicadas antes do invalidateSize.
+            setTimeout(() => {
+                if (map) map.invalidateSize(); // Verifica se o mapa foi inicializado
+            }, 350);
+        });
+    });
 
     let marcadorUsuario = null;
 
     function adicionarMarcador() {
+        if (!map) {
+            console.error("Mapa não inicializado ainda.");
+            alert("O mapa não foi carregado corretamente. Por favor, tente recarregar a página.");
+            return;
+        }
+
         const lat = parseFloat(document.getElementById('latitude').value);
         const lng = parseFloat(document.getElementById('longitude').value);
 
@@ -341,37 +372,13 @@ HTML_TEMPLATE = """
         const container = document.getElementById("input-codigo-container");
         if (container) {
             container.style.display = "block";
+            // Opcional: focar no input após exibi-lo
+            const codigoInput = document.getElementById("codigo-casa");
+            if (codigoInput) {
+                codigoInput.focus();
+            }
         }
     }
-
-    // Alterna tema claro/escuro
-    const btnToggleTheme = document.getElementById('btn-toggle-theme');
-    const iconSun = document.getElementById('icon-sun');
-    const iconMoon = document.getElementById('icon-moon');
-
-    // Define o ícone inicial com base no tema padrão (claro)
-    if(document.body.classList.contains('dark-mode')) {
-        iconSun.style.display = 'inline';
-        iconMoon.style.display = 'none';
-    } else {
-        iconSun.style.display = 'none';
-        iconMoon.style.display = 'inline';
-    }
-
-    btnToggleTheme.addEventListener('click', () => {
-        document.body.classList.toggle('dark-mode');
-        if(document.body.classList.contains('dark-mode')) {
-            iconSun.style.display = 'inline';
-            iconMoon.style.display = 'none';
-        } else {
-            iconSun.style.display = 'none';
-            iconMoon.style.display = 'inline';
-        }
-        // Recalcula tamanho do mapa ao trocar tema
-        // Aumentado o atraso para garantir que as transições CSS do tema
-        // tenham tempo para serem aplicadas antes do invalidateSize.
-        setTimeout(() => map.invalidateSize(), 350);
-    });
 </script>
 </body>
 </html>
@@ -394,5 +401,5 @@ if __name__ == '__main__':
     # Certifique-se de definir a variável de ambiente GOOGLE_CREDENTIALS
     # antes de executar este script em produção.
     # Para testes locais, você pode definir GOOGLE_CREDENTIALS no seu terminal:
-    # export GOOGLE_CREDENTIALS='{"type": "service_account", "project_id": "...", "private_key_id": "...", "private_key": "...", "client_email": "...", "client_id": "...", "auth_uri": "...", "token_uri": "...", "auth_provider_x509_cert_url": "...", "client_x509_cert_url": "...", "universe_domain": "..."}'
+    # export GOOGLE_CREDENTIALS='{"type": "service_account", "project_id": "...", "private_key_id": "...", "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n", "client_email": "...", "client_id": "...", "auth_uri": "...", "token_uri": "...", "auth_provider_x509_cert_url": "...", "client_x509_cert_url": "...", "universe_domain": "..."}'
     app.run(debug=True)
