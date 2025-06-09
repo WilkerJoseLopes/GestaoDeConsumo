@@ -1,7 +1,7 @@
 import os
 import json
 import gspread
-from flask import Flask
+from flask import Flask, render_template_string
 from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
@@ -23,6 +23,7 @@ except Exception as e:
     planilha = None
     folha_casa = None
 
+# O HTML_TEMPLATE será modificado para a nova lógica de inicialização do mapa
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="pt">
@@ -151,8 +152,12 @@ HTML_TEMPLATE = """
             background-color: #005fa3;
         }
 
+        /* MUITO IMPORTANTE: Garantir que o mapa TEM altura. */
+        /* Se o mapa estiver dentro de um elemento que oculta ou tem altura 0, */
+        /* isso pode causar problemas. Certifique-se de que nenhum JS ou CSS */
+        /* está a sobrescrever isto para 0 ou 'auto' sem que o conteúdo force altura. */
         #map {
-            height: 500px;
+            height: 500px; /* Altura fixa para garantir visibilidade */
             width: 100%;
             border-radius: 10px;
             box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
@@ -204,15 +209,6 @@ HTML_TEMPLATE = """
 
         body.dark-mode #map {
             box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
-        }
-
-        /* Botão de debug */
-        #debug-button {
-            margin-top: 10px;
-            background-color: #f44336; /* Vermelho */
-        }
-        #debug-button:hover {
-            background-color: #d32f2f; /* Vermelho mais escuro */
         }
 
         @media (max-width: 600px) {
@@ -281,7 +277,6 @@ HTML_TEMPLATE = """
                 placeholder="Longitude"
             />
             <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
-            <button id="debug-button" onclick="forceMapResize()">Forçar Redimensionamento do Mapa</button>
         </div>
 
         <div id="map"></div>
@@ -296,44 +291,48 @@ HTML_TEMPLATE = """
 <script>
     let map; // Declarar 'map' fora para que seja acessível globalmente
 
-    // Função de depuração para forçar o redimensionamento do mapa
-    function forceMapResize() {
-        if (map) {
-            console.log("Forçando invalidateSize() do mapa...");
-            map.invalidateSize();
-            console.log("invalidateSize() chamado.");
+    // Função para inicializar o mapa
+    function initializeMap() {
+        const mapElement = document.getElementById('map');
+        if (!mapElement) {
+            console.error("Elemento #map não encontrado. Não é possível inicializar o mapa.");
+            return;
+        }
+
+        // Verifica se a div do mapa tem uma altura válida (maior que 0)
+        // Usamos offsetHeight que inclui padding e bordas, dando uma medida mais precisa do espaço ocupado.
+        if (mapElement.offsetHeight > 0) {
+            console.log("Altura do elemento #map é > 0. Inicializando o mapa...");
+            map = L.map('map').setView([41.1578, -8.6291], 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            map.invalidateSize(); // Chamar invalidateSize após a inicialização
+            console.log("Mapa inicializado e invalidateSize() chamado.");
+
+            // Opcional: Remover o spinner ou mensagem de carregamento se houver
         } else {
-            console.warn("Não foi possível forçar o redimensionamento: mapa não está inicializado.");
+            // Se a div do mapa ainda não tem altura, tenta novamente
+            console.log("Altura do elemento #map ainda é 0. Tentando novamente em breve...");
+            // Usamos setTimeout para evitar loop infinito e para dar tempo ao navegador
+            // para renderizar e aplicar estilos.
+            setTimeout(initializeMap, 100); // Tenta novamente após 100ms
         }
     }
 
-    // Inicializa o mapa APÓS o DOM estar completamente carregado e analisado.
+    // Chamada inicial para começar a verificar a altura e inicializar o mapa
     document.addEventListener('DOMContentLoaded', function() {
-        map = L.map('map').setView([41.1578, -8.6291], 12);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
-
-        // Chamar invalidateSize() imediatamente após a inicialização do mapa
-        // dentro de DOMContentLoaded. Isso é crucial para garantir que o Leaflet
-        // calcule as dimensões corretamente após o CSS ser aplicado.
-        map.invalidateSize();
-        console.log("Mapa inicializado e invalidateSize() chamado após DOMContentLoaded.");
-        const mapElement = document.getElementById('map');
-        if (mapElement) {
-            console.log(`Altura do elemento #map após DOMContentLoaded: ${mapElement.clientHeight}px`);
-        } else {
-            console.warn("Elemento #map não encontrado após DOMContentLoaded.");
-        }
-
+        initializeMap(); // Inicia o processo de verificação e inicialização
 
         // Configuração inicial do ícone do tema
         const btnToggleTheme = document.getElementById('btn-toggle-theme');
         const iconSun = document.getElementById('icon-sun');
         const iconMoon = document.getElementById('icon-moon');
 
+        // Define o ícone correto baseado no modo atual ao carregar a página
         if(document.body.classList.contains('dark-mode')) {
             iconSun.style.display = 'inline';
             iconMoon.style.display = 'none';
@@ -344,6 +343,7 @@ HTML_TEMPLATE = """
 
         btnToggleTheme.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
+            // Altera os ícones de acordo com o tema
             if(document.body.classList.contains('dark-mode')) {
                 iconSun.style.display = 'inline';
                 iconMoon.style.display = 'none';
@@ -351,11 +351,11 @@ HTML_TEMPLATE = """
                 iconSun.style.display = 'none';
                 iconMoon.style.display = 'inline';
             }
-            // Aumentado o atraso para garantir que as transições CSS do tema
+            // Aumenta o atraso para garantir que as transições CSS do tema
             // tenham tempo para serem aplicadas antes do invalidateSize.
             setTimeout(() => {
                 if (map) {
-                    map.invalidateSize(); // Verifica se o mapa foi inicializado
+                    map.invalidateSize();
                     console.log("invalidateSize() chamado após alteração do tema.");
                 }
             }, 500); // Aumentado para 500ms
@@ -427,7 +427,7 @@ def home():
             # Você pode adicionar uma mensagem de erro no HTML aqui se desejar
     else:
         print("Google Sheets API não inicializada. Verifique suas credenciais.")
-    return HTML_TEMPLATE
+    return render_template_string(HTML_TEMPLATE)
 
 if __name__ == '__main__':
     # Certifique-se de definir a variável de ambiente GOOGLE_CREDENTIALS
