@@ -1,8 +1,10 @@
 import os
 import json
 import gspread
-from flask import Flask
+from flask import Flask, request, jsonify
 from google.oauth2.service_account import Credentials
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderUnavailable
 
 app = Flask(__name__)
 
@@ -12,176 +14,62 @@ GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
 creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
 client = gspread.authorize(creds)
 
-# Abre a planilha (dados ainda não usados)
+# Abre a planilha
 planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
 folha_casa = planilha.worksheet("Dados Casa")
 
-# HTML
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="pt">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Casas Inteligentes</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f9;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+# Geolocalização para evitar coordenadas inválidas (ex: no mar)
+geolocator = Nominatim(user_agent="gestor_casas")
 
-        header {
-            background-color: #0077cc;
-            color: white;
-            padding: 1rem;
-            text-align: center;
-        }
+@app.route("/")
+def index():
+    with open("templates/index.html", encoding="utf-8") as f:
+        return f.read()
 
-        main {
-            flex: 1;
-            padding: 20px;
-            max-width: 960px;
-            margin: 0 auto;
-        }
+@app.route("/verificar_coords", methods=["POST"])
+def verificar_coords():
+    latitude = request.json.get("latitude")
+    longitude = request.json.get("longitude")
 
-        #form-coords {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+    try:
+        lat = round(float(latitude), 4)
+        lon = round(float(longitude), 4)
+    except:
+        return jsonify({"erro": "Coordenadas inválidas."}), 400
 
-        input[type="number"], input[type="text"] {
-            padding: 10px;
-            margin: 8px;
-            width: 200px;
-            max-width: 90%;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-        }
+    dados = folha_casa.get_all_records()
+    casa = next((c for c in dados if round(float(c["Latitude"]), 4) == lat and round(float(c["Longitude"]), 4) == lon), None)
 
-        button {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 6px;
-            background-color: #0077cc;
-            color: white;
-            cursor: pointer;
-        }
+    if not casa:
+        return jsonify({"erro": "Coordenadas não encontradas no sistema."}), 404
 
-        button:hover {
-            background-color: #005fa3;
-        }
+    try:
+        local = geolocator.reverse(f"{lat}, {lon}", timeout=10)
+    except GeocoderUnavailable:
+        return jsonify({"erro": "Serviço de geolocalização indisponível."}), 503
 
-        #map {
-            height: 500px;
-            width: 100%;
-            border-radius: 10px;
-            box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
-        }
+    if not local or "ocean" in local.address.lower():
+        return jsonify({"erro": "Coordenadas inválidas (localização parece não real)."}), 400
 
-        footer {
-            background-color: #222;
-            color: #ccc;
-            text-align: center;
-            padding: 15px 10px;
-            font-size: 0.9em;
-        }
+    return jsonify({"mensagem": "Casa encontrada com sucesso."})
 
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 1.5em;
-            }
+@app.route("/aceder_casa", methods=["POST"])
+def aceder_casa():
+    latitude = request.json.get("latitude")
+    longitude = request.json.get("longitude")
+    codigo = request.json.get("codigo")
 
-            #form-coords {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
+    dados = folha_casa.get_all_records()
+    casa = next(
+        (c for c in dados if round(float(c["Latitude"]), 4) == round(float(latitude), 4) and
+         round(float(c["Longitude"]), 4) == round(float(longitude), 4) and
+         str(c["ID"]) == str(codigo)), None
+    )
 
-            input, button {
-                width: 90%;
-                margin: 6px 0;
-            }
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>Gestor de Casas Inteligentes</h1>
-    </header>
+    if not casa:
+        return jsonify({"erro": "Código incorreto para esta casa."}), 401
 
-    <main>
-        <div id="form-coords">
-            <input type="number" id="latitude" step="any" placeholder="Latitude">
-            <input type="number" id="longitude" step="any" placeholder="Longitude">
-            <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
-        </div>
+    return jsonify({"mensagem": "Acesso concedido.", "proprietario": casa.get("Proprietários", "Desconhecido")})
 
-        <div id="map"></div>
-    </main>
-
-    <footer>
-        ⚠️ Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.
-    </footer>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        const map = L.map('map').setView([41.1578, -8.6291], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-        let marcadorUsuario = null;
-
-        function adicionarMarcador() {
-            const lat = parseFloat(document.getElementById('latitude').value);
-            const lng = parseFloat(document.getElementById('longitude').value);
-
-            if (isNaN(lat) || isNaN(lng)) {
-                alert("Por favor, insira valores válidos para latitude e longitude.");
-                return;
-            }
-
-            if (marcadorUsuario) {
-                map.removeLayer(marcadorUsuario);
-            }
-
-            marcadorUsuario = L.marker([lat, lng]).addTo(map);
-
-            marcadorUsuario.bindPopup(`
-                <div id="popup-content">
-                    <strong>Minha Casa</strong><br>
-                    Latitude: ${lat}<br>
-                    Longitude: ${lng}<br><br>
-                    <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
-                    <div id="input-codigo-container" style="margin-top: 10px; display: none;">
-                        <input type="text" id="codigo-casa" placeholder="Introduza o código">
-                    </div>
-                </div>
-            `).openPopup();
-
-            map.setView([lat, lng], 16);
-        }
-
-        function mostrarInputCodigo() {
-            const container = document.getElementById("input-codigo-container");
-            if (container) {
-                container.style.display = "block";
-            }
-        }
-    </script>
-</body>
-</html>
-"""
-
-@app.route('/')
-def home():
-    # Lê os dados (futuramente usados)
-    folha_casa.get_all_records()
-    return HTML_TEMPLATE
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
