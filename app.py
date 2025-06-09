@@ -272,12 +272,13 @@ HTML_TEMPLATE = """
         demonstrativos. Nenhuma informação aqui representa dados reais.
     </footer>
 
-    <script
-        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-o9N1j6kJkR8b0G3LDX0GZmhKQKZ1QwOzv3F3h+PsKro="
-        crossorigin=""
-    ></script>
-    <script>
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-o9N1j6kJkR8b0G3LDX0GZmhKQKZ1QwOzv3F3h+PsKro="
+    crossorigin=""
+></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
         const map = L.map('map').setView([41.1578, -8.6291], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution:
@@ -286,7 +287,7 @@ HTML_TEMPLATE = """
 
         let marcadorUsuario = null;
 
-        function adicionarMarcador() {
+        window.adicionarMarcador = function () {
             const lat = parseFloat(document.getElementById('latitude').value);
             const lng = parseFloat(document.getElementById('longitude').value);
 
@@ -301,11 +302,11 @@ HTML_TEMPLATE = """
 
             marcadorUsuario = L.marker([lat, lng]).addTo(map);
 
-            marcadorUsuario.bindPopup(\`
+            marcadorUsuario.bindPopup(`
                 <div id="popup-content">
                     <strong>Minha Casa</strong><br>
-                    Latitude: \${lat}<br>
-                    Longitude: \${lng}<br><br>
+                    Latitude: ${lat}<br>
+                    Longitude: ${lng}<br><br>
                     <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
                     <div
                         id="input-codigo-container"
@@ -314,17 +315,17 @@ HTML_TEMPLATE = """
                         <input type="text" id="codigo-casa" placeholder="Introduza o código" />
                     </div>
                 </div>
-            \`).openPopup();
+            `).openPopup();
 
             map.setView([lat, lng], 16);
-        }
+        };
 
-        function mostrarInputCodigo() {
+        window.mostrarInputCodigo = function () {
             const container = document.getElementById('input-codigo-container');
             if (container) {
                 container.style.display = 'block';
             }
-        }
+        };
 
         // Dark mode toggle
         const btnToggle = document.getElementById('btn-toggle-theme');
@@ -346,18 +347,14 @@ HTML_TEMPLATE = """
             }
         }
 
-        // Carregar preferência salva
         const temaSalvo = localStorage.getItem('tema');
-        if (temaSalvo === 'escuro') {
-            setDarkMode(true);
-        } else {
-            setDarkMode(false);
-        }
+        setDarkMode(temaSalvo === 'escuro');
 
         btnToggle.addEventListener('click', () => {
             setDarkMode(!body.classList.contains('dark-mode'));
         });
-    </script>
+    });
+</script>
 </body>
 </html>
 """
