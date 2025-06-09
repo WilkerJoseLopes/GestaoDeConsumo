@@ -7,13 +7,26 @@ from google.oauth2.service_account import Credentials
 app = Flask(__name__)
 
 # Configuração do Google Sheets
+# É crucial que a variável de ambiente 'GOOGLE_CREDENTIALS' esteja configurada
+# com o conteúdo do seu arquivo JSON de credenciais do serviço.
+# Exemplo (em seu ambiente):
+# export GOOGLE_CREDENTIALS='{"type": "service_account", "project_id": "YOUR_PROJECT_ID", ...}'
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
-creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
-client = gspread.authorize(creds)
+try:
+    GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
+    creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
+    client = gspread.authorize(creds)
 
-planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
-folha_casa = planilha.worksheet("Dados Casa")
+    planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
+    folha_casa = planilha.worksheet("Dados Casa")
+except Exception as e:
+    print(f"Erro ao inicializar Google Sheets API: {e}")
+    # Trate o erro conforme a necessidade, talvez um fallback ou encerramento
+    # Para fins de demonstração, continuaremos sem a conexão com o Sheets,
+    # mas em produção você provavelmente desejaria um comportamento mais robusto.
+    client = None
+    planilha = None
+    folha_casa = None
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -231,7 +244,6 @@ HTML_TEMPLATE = """
         <div id="header-right">
             <div id="sobre-projeto" title="Informações sobre o projeto">Sobre o projeto</div>
             <button id="btn-toggle-theme" aria-label="Alternar modo claro e escuro" title="Alternar modo claro e escuro">
-                <!-- ícone sol inicial -->
                 <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
                     <circle cx="12" cy="12" r="5"/>
                     <line x1="12" y1="1" x2="12" y2="3"/>
@@ -243,7 +255,6 @@ HTML_TEMPLATE = """
                     <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
                     <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                 </svg>
-                <!-- ícone lua inicial -->
                 <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12.79A9 9 0 0112.21 3 7 7 0 0012 21a9 9 0 009-8.21z"/>
                 </svg>
@@ -288,9 +299,11 @@ HTML_TEMPLATE = """
     }).addTo(map);
 
     // Corrige o redimensionamento do mapa para evitar partes faltando
-    window.onload = function() {
-      map.invalidateSize();
-    };
+    // Chamada inicial para garantir que o mapa se redimensione corretamente
+    // após o DOM estar completamente carregado e renderizado.
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 100); // Um pequeno atraso garante que o elemento 'map' tenha suas dimensões finais
 
     let marcadorUsuario = null;
 
@@ -335,6 +348,16 @@ HTML_TEMPLATE = """
     const btnToggleTheme = document.getElementById('btn-toggle-theme');
     const iconSun = document.getElementById('icon-sun');
     const iconMoon = document.getElementById('icon-moon');
+
+    // Define o ícone inicial com base no tema padrão (claro)
+    if(document.body.classList.contains('dark-mode')) {
+        iconSun.style.display = 'inline';
+        iconMoon.style.display = 'none';
+    } else {
+        iconSun.style.display = 'none';
+        iconMoon.style.display = 'inline';
+    }
+
     btnToggleTheme.addEventListener('click', () => {
         document.body.classList.toggle('dark-mode');
         if(document.body.classList.contains('dark-mode')) {
@@ -345,7 +368,9 @@ HTML_TEMPLATE = """
             iconMoon.style.display = 'inline';
         }
         // Recalcula tamanho do mapa ao trocar tema
-        setTimeout(() => map.invalidateSize(), 300);
+        // Aumentado o atraso para garantir que as transições CSS do tema
+        // tenham tempo para serem aplicadas antes do invalidateSize.
+        setTimeout(() => map.invalidateSize(), 350);
     });
 </script>
 </body>
@@ -354,8 +379,20 @@ HTML_TEMPLATE = """
 
 @app.route('/')
 def home():
-    folha_casa.get_all_records()  # só para garantir autenticação e conexão
+    if folha_casa:
+        try:
+            folha_casa.get_all_records()  # só para garantir autenticação e conexão
+            print("Conexão com Google Sheets verificada com sucesso.")
+        except Exception as e:
+            print(f"Erro ao acessar Google Sheets: {e}")
+            # Você pode adicionar uma mensagem de erro no HTML aqui se desejar
+    else:
+        print("Google Sheets API não inicializada. Verifique suas credenciais.")
     return HTML_TEMPLATE
 
 if __name__ == '__main__':
+    # Certifique-se de definir a variável de ambiente GOOGLE_CREDENTIALS
+    # antes de executar este script em produção.
+    # Para testes locais, você pode definir GOOGLE_CREDENTIALS no seu terminal:
+    # export GOOGLE_CREDENTIALS='{"type": "service_account", "project_id": "...", "private_key_id": "...", "private_key": "...", "client_email": "...", "client_id": "...", "auth_uri": "...", "token_uri": "...", "auth_provider_x509_cert_url": "...", "client_x509_cert_url": "...", "universe_domain": "..."}'
     app.run(debug=True)
