@@ -16,7 +16,6 @@ client = gspread.authorize(creds)
 planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
 folha_casa = planilha.worksheet("Dados Casa")
 
-# HTML completo com header modificado e toggle dark mode
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="pt">
@@ -27,6 +26,8 @@ HTML_TEMPLATE = """
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-o9N1j6kJkR8b0G3LDX0GZmhKQKZ1QwOzv3F3h+PsKro="
+        crossorigin=""
     />
     <style>
         body {
@@ -56,6 +57,15 @@ HTML_TEMPLATE = """
             text-align: left;
         }
 
+        header h1 a {
+            color: white;
+            text-decoration: none;
+        }
+        header h1 a:hover,
+        header h1 a:focus {
+            text-decoration: underline;
+        }
+
         #header-right {
             display: flex;
             align-items: center;
@@ -70,17 +80,30 @@ HTML_TEMPLATE = """
 
         #btn-toggle-theme {
             background: none;
-            border: none;
+            border: 2px solid white;
             cursor: pointer;
             color: white;
-            font-size: 1.4rem;
-            padding: 6px 10px;
+            font-size: 1.2rem;
+            padding: 6px 12px;
             border-radius: 6px;
-            transition: background-color 0.3s;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        #btn-toggle-theme:hover {
-            background-color: rgba(255, 255, 255, 0.2);
+        #btn-toggle-theme:hover,
+        #btn-toggle-theme:focus {
+            background-color: white;
+            color: #0077cc;
+            border-color: white;
+            outline: none;
+        }
+
+        #btn-toggle-theme svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
         }
 
         main {
@@ -144,6 +167,14 @@ HTML_TEMPLATE = """
             color: #e0e0e0;
         }
 
+        body.dark-mode header h1 a {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode #sobre-projeto {
+            color: #e0e0e0;
+        }
+
         body.dark-mode input,
         body.dark-mode button {
             border-color: #555;
@@ -192,10 +223,27 @@ HTML_TEMPLATE = """
 </head>
 <body>
     <header>
-        <h1>Gestão de Consumo</h1>
+        <h1><a href="/">Gestão de Consumo</a></h1>
         <div id="header-right">
             <div id="sobre-projeto" title="Informações sobre o projeto">Sobre o projeto</div>
-            <button id="btn-toggle-theme" aria-label="Alternar modo claro/escuro">🌙</button>
+            <button id="btn-toggle-theme" aria-label="Alternar modo claro e escuro" title="Alternar modo claro e escuro">
+                <!-- ícone sol inicial -->
+                <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <!-- ícone lua inicial -->
+                <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 0112.21 3 7 7 0 0012 21a9 9 0 009-8.21z"/>
+                </svg>
+            </button>
         </div>
     </header>
 
@@ -224,10 +272,17 @@ HTML_TEMPLATE = """
         demonstrativos. Nenhuma informação aqui representa dados reais.
     </footer>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-o9N1j6kJkR8b0G3LDX0GZmhKQKZ1QwOzv3F3h+PsKro="
+        crossorigin=""
+    ></script>
     <script>
         const map = L.map('map').setView([41.1578, -8.6291], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution:
+                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
 
         let marcadorUsuario = null;
 
@@ -274,22 +329,33 @@ HTML_TEMPLATE = """
         // Dark mode toggle
         const btnToggle = document.getElementById('btn-toggle-theme');
         const body = document.body;
+        const iconSun = document.getElementById('icon-sun');
+        const iconMoon = document.getElementById('icon-moon');
 
-        // Carregar preferência salva no localStorage (se houver)
-        if (localStorage.getItem('tema') === 'escuro') {
-            body.classList.add('dark-mode');
-            btnToggle.textContent = '☀️';
+        function setDarkMode(isDark) {
+            if (isDark) {
+                body.classList.add('dark-mode');
+                iconSun.style.display = 'inline';
+                iconMoon.style.display = 'none';
+                localStorage.setItem('tema', 'escuro');
+            } else {
+                body.classList.remove('dark-mode');
+                iconSun.style.display = 'none';
+                iconMoon.style.display = 'inline';
+                localStorage.setItem('tema', 'claro');
+            }
+        }
+
+        // Carregar preferência salva
+        const temaSalvo = localStorage.getItem('tema');
+        if (temaSalvo === 'escuro') {
+            setDarkMode(true);
+        } else {
+            setDarkMode(false);
         }
 
         btnToggle.addEventListener('click', () => {
-            body.classList.toggle('dark-mode');
-            if (body.classList.contains('dark-mode')) {
-                btnToggle.textContent = '☀️';
-                localStorage.setItem('tema', 'escuro');
-            } else {
-                btnToggle.textContent = '🌙';
-                localStorage.setItem('tema', 'claro');
-            }
+            setDarkMode(!body.classList.contains('dark-mode'));
         });
     </script>
 </body>
@@ -298,7 +364,6 @@ HTML_TEMPLATE = """
 
 @app.route('/')
 def home():
-    # Lê os dados (futuramente usados)
     folha_casa.get_all_records()
     return HTML_TEMPLATE
 
