@@ -272,88 +272,49 @@ HTML_TEMPLATE = """
         demonstrativos. Nenhuma informação aqui representa dados reais.
     </footer>
 
-<script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-o9N1j6kJkR8b0G3LDX0GZmhKQKZ1QwOzv3F3h+PsKro="
-    crossorigin=""
-></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const map = L.map('map').setView([41.1578, -8.6291], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution:
-                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        }).addTo(map);
+    const map = L.map('map').setView([41.1578, -8.6291], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        let marcadorUsuario = null;
+    let marcadorUsuario = null;
 
-        window.adicionarMarcador = function () {
-            const lat = parseFloat(document.getElementById('latitude').value);
-            const lng = parseFloat(document.getElementById('longitude').value);
+    function adicionarMarcador() {
+        const lat = parseFloat(document.getElementById('latitude').value);
+        const lng = parseFloat(document.getElementById('longitude').value);
 
-            if (isNaN(lat) || isNaN(lng)) {
-                alert('Por favor, insira valores válidos para latitude e longitude.');
-                return;
-            }
-
-            if (marcadorUsuario) {
-                map.removeLayer(marcadorUsuario);
-            }
-
-            marcadorUsuario = L.marker([lat, lng]).addTo(map);
-
-            marcadorUsuario.bindPopup(`
-                <div id="popup-content">
-                    <strong>Minha Casa</strong><br>
-                    Latitude: ${lat}<br>
-                    Longitude: ${lng}<br><br>
-                    <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
-                    <div
-                        id="input-codigo-container"
-                        style="margin-top: 10px; display: none;"
-                    >
-                        <input type="text" id="codigo-casa" placeholder="Introduza o código" />
-                    </div>
-                </div>
-            `).openPopup();
-
-            map.setView([lat, lng], 16);
-        };
-
-        window.mostrarInputCodigo = function () {
-            const container = document.getElementById('input-codigo-container');
-            if (container) {
-                container.style.display = 'block';
-            }
-        };
-
-        // Dark mode toggle
-        const btnToggle = document.getElementById('btn-toggle-theme');
-        const body = document.body;
-        const iconSun = document.getElementById('icon-sun');
-        const iconMoon = document.getElementById('icon-moon');
-
-        function setDarkMode(isDark) {
-            if (isDark) {
-                body.classList.add('dark-mode');
-                iconSun.style.display = 'inline';
-                iconMoon.style.display = 'none';
-                localStorage.setItem('tema', 'escuro');
-            } else {
-                body.classList.remove('dark-mode');
-                iconSun.style.display = 'none';
-                iconMoon.style.display = 'inline';
-                localStorage.setItem('tema', 'claro');
-            }
+        if (isNaN(lat) || isNaN(lng)) {
+            alert("Por favor, insira valores válidos para latitude e longitude.");
+            return;
         }
 
-        const temaSalvo = localStorage.getItem('tema');
-        setDarkMode(temaSalvo === 'escuro');
+        if (marcadorUsuario) {
+            map.removeLayer(marcadorUsuario);
+        }
 
-        btnToggle.addEventListener('click', () => {
-            setDarkMode(!body.classList.contains('dark-mode'));
-        });
-    });
+        marcadorUsuario = L.marker([lat, lng]).addTo(map);
+
+        marcadorUsuario.bindPopup(
+            `<div id="popup-content">
+                <strong>Minha Casa</strong><br>
+                Latitude: ${lat}<br>
+                Longitude: ${lng}<br><br>
+                <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
+                <div id="input-codigo-container" style="margin-top: 10px; display: none;">
+                    <input type="text" id="codigo-casa" placeholder="Introduza o código">
+                </div>
+            </div>`
+        ).openPopup();
+
+        map.setView([lat, lng], 16);
+    }
+
+    function mostrarInputCodigo() {
+        const container = document.getElementById("input-codigo-container");
+        if (container) {
+            container.style.display = "block";
+        }
+    }
 </script>
 </body>
 </html>
