@@ -12,7 +12,6 @@ GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
 creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
 client = gspread.authorize(creds)
 
-# Abre a planilha
 planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
 folha_casa = planilha.worksheet("Dados Casa")
 
@@ -30,8 +29,8 @@ HTML_TEMPLATE = """
         crossorigin=""
     />
     <style>
-        body, html {
-            margin: 0; padding: 0; height: 100%;
+        body {
+            margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f7f9;
             color: #333;
@@ -107,13 +106,12 @@ HTML_TEMPLATE = """
         }
 
         main {
+            flex: 1;
+            padding: 20px;
             max-width: 960px;
             margin: 0 auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            flex-grow: 1;
+            box-sizing: border-box;
+            width: 100%;
         }
 
         #form-coords {
@@ -129,6 +127,7 @@ HTML_TEMPLATE = """
             max-width: 90%;
             border-radius: 6px;
             border: 1px solid #ccc;
+            box-sizing: border-box;
         }
 
         button {
@@ -144,50 +143,21 @@ HTML_TEMPLATE = """
             background-color: #005fa3;
         }
 
-        #map-container {
+        #map {
+            height: 500px;
             width: 100%;
-            max-width: 960px;
-            height: 500px; /* Altura fixa para limite do mapa */
             border-radius: 10px;
             box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
-            overflow: hidden; /* Evita vazamento do mapa */
-            margin-top: 10px;
-        }
-
-        #map {
-            width: 100%;
-            height: 100%;
         }
 
         footer {
             background-color: #222;
             color: #ccc;
-            text-align: right;
+            text-align: left;
             padding: 15px 20px;
             font-size: 0.9em;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 960px;
-            margin: 0 auto;
-            width: 100%;
             box-sizing: border-box;
-        }
-
-        #footer-text-left {
-            text-align: left;
-            flex: 1;
-        }
-
-        #sobre-projeto-footer {
-            cursor: pointer;
-            user-select: none;
-            color: #ccc;
-            font-weight: 600;
-        }
-
-        #sobre-projeto-footer:hover {
-            text-decoration: underline;
+            width: 100%;
         }
 
         /* Dark mode styles */
@@ -252,11 +222,6 @@ HTML_TEMPLATE = """
                 width: 90%;
                 margin: 6px 0;
             }
-            footer {
-                flex-direction: column;
-                text-align: center;
-                gap: 8px;
-            }
         }
     </style>
 </head>
@@ -266,7 +231,7 @@ HTML_TEMPLATE = """
         <div id="header-right">
             <div id="sobre-projeto" title="Informações sobre o projeto">Sobre o projeto</div>
             <button id="btn-toggle-theme" aria-label="Alternar modo claro e escuro" title="Alternar modo claro e escuro">
-                <!-- ícone sol -->
+                <!-- ícone sol inicial -->
                 <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
                     <circle cx="12" cy="12" r="5"/>
                     <line x1="12" y1="1" x2="12" y2="3"/>
@@ -278,7 +243,7 @@ HTML_TEMPLATE = """
                     <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
                     <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                 </svg>
-                <!-- ícone lua -->
+                <!-- ícone lua inicial -->
                 <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12.79A9 9 0 0112.21 3 7 7 0 0012 21a9 9 0 009-8.21z"/>
                 </svg>
@@ -303,17 +268,12 @@ HTML_TEMPLATE = """
             <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
         </div>
 
-        <div id="map-container">
-            <div id="map"></div>
-        </div>
+        <div id="map"></div>
     </main>
 
     <footer>
-        <div id="footer-text-left">
-            Este sistema é fictício e destina-se exclusivamente a fins académicos e
-            demonstrativos. Nenhuma informação aqui representa dados reais.
-        </div>
-        <div id="sobre-projeto-footer" title="Informações sobre o projeto">Sobre o projeto</div>
+        Este sistema é fictício e destina-se exclusivamente a fins académicos e
+        demonstrativos. Nenhuma informação aqui representa dados reais.
     </footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -326,6 +286,11 @@ HTML_TEMPLATE = """
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
+    // Corrige o redimensionamento do mapa para evitar partes faltando
+    window.onload = function() {
+      map.invalidateSize();
+    };
 
     let marcadorUsuario = null;
 
@@ -379,6 +344,8 @@ HTML_TEMPLATE = """
             iconSun.style.display = 'none';
             iconMoon.style.display = 'inline';
         }
+        // Recalcula tamanho do mapa ao trocar tema
+        setTimeout(() => map.invalidateSize(), 300);
     });
 </script>
 </body>
@@ -387,7 +354,7 @@ HTML_TEMPLATE = """
 
 @app.route('/')
 def home():
-    folha_casa.get_all_records()  # Para garantir autenticação e leitura
+    folha_casa.get_all_records()  # só para garantir autenticação e conexão
     return HTML_TEMPLATE
 
 if __name__ == '__main__':
