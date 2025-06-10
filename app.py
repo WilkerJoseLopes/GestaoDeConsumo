@@ -30,28 +30,27 @@ HTML_TEMPLATE = """
     <title>Gestão de Consumo</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* CSS REVISADO (DO CÓDIGO FUNCIONAL COM ALTERAÇÕES PARA CABEÇALHO/RODAPÉ ATUAL) */
         html, body {
             margin: 0;
             padding: 0;
-            height: 100%; /* Garante que body e html ocupem 100% da viewport */
+            height: 100%;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f7f9;
             color: #333;
             display: flex;
-            flex-direction: column; /* Coloca os elementos em coluna */
-            min-height: 100vh; /* Ocupa pelo menos a altura da viewport */
-            transition: background-color 0.3s, color 0.3s; /* Transição para o tema */
+            flex-direction: column;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         header {
             background-color: #0077cc;
             color: white;
-            padding: 1rem 2rem; /* Mais padding */
-            display: flex; /* Flexbox para layout horizontal */
-            justify-content: space-between; /* Espaço entre título e botões */
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
         }
 
@@ -59,44 +58,43 @@ HTML_TEMPLATE = """
             margin: 0;
             font-weight: 600;
             font-size: 1.8rem;
-            text-align: left;
         }
-        header h1 a { /* Estilo para o link no título */
+        header h1 a {
             color: white;
             text-decoration: none;
         }
-        header h1 a:hover, header h1 a:focus {
+        header h1 a:hover {
             text-decoration: underline;
         }
 
-        #header-right { /* Container para elementos à direita do header */
+        #header-right {
             display: flex;
             align-items: center;
             gap: 20px;
         }
         #sobre-projeto {
             font-size: 1rem;
-            cursor: default;
-            user-select: none;
-            /* Não há botão de tema ainda, então o estilo é simples */
+            color: white;
+            text-decoration: none;
+        }
+        #sobre-projeto:hover {
+            text-decoration: underline;
         }
 
-
         main {
-            flex: 1; /* Permite que main ocupe o espaço restante */
+            flex: 1;
             padding: 20px;
             max-width: 960px;
             margin: 0 auto;
-            box-sizing: border-box; /* Garante que padding não adicione largura */
+            box-sizing: border-box;
             width: 100%;
-            display: flex; /* Flexbox para layout em coluna */
+            display: flex;
             flex-direction: column;
-            gap: 20px; /* Espaço entre elementos */
+            gap: 20px;
         }
 
         #form-coords {
             text-align: center;
-            margin-bottom: 0; /* Removido para usar gap do flexbox */
         }
 
         input[type="number"], input[type="text"] {
@@ -123,24 +121,23 @@ HTML_TEMPLATE = """
         }
 
         #map {
-            height: 500px; /* Altura fixa essencial */
+            height: 500px;
             width: 100%;
             border-radius: 10px;
             box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
-            background-color: lightgray; /* Adicionado para ver a div mesmo se o mapa não carregar */
+            background-color: lightgray;
         }
 
         footer {
             background-color: #222;
             color: #ccc;
-            text-align: left; /* Alinhamento à esquerda como no seu último código */
+            text-align: left;
             padding: 15px 20px;
             font-size: 0.9em;
             box-sizing: border-box;
             width: 100%;
         }
 
-        /* Media queries para responsividade */
         @media (max-width: 600px) {
             header {
                 flex-direction: column;
@@ -171,8 +168,8 @@ HTML_TEMPLATE = """
     <header>
         <h1><a href="/">Gestão de Consumo</a></h1>
         <div id="header-right">
-            <div id="sobre-projeto" title="Informações sobre o projeto">Sobre o projeto</div>
-            </div>
+            <a id="sobre-projeto" href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank" title="Ver projeto no GitHub">Sobre o projeto</a>
+        </div>
     </header>
 
     <main>
@@ -191,7 +188,6 @@ HTML_TEMPLATE = """
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // JS DO CÓDIGO FUNCIONAL - MANTIDO SIMPLES
         const map = L.map('map').setView([41.1578, -8.6291], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -223,6 +219,7 @@ HTML_TEMPLATE = """
                     </div>
                 </div>`
             ).openPopup();
+
             map.setView([lat, lng], 16);
         }
 
@@ -230,7 +227,6 @@ HTML_TEMPLATE = """
             const container = document.getElementById("input-codigo-container");
             if (container) {
                 container.style.display = "block";
-                // Opcional: focar no input após exibi-lo
                 const codigoInput = document.getElementById("codigo-casa");
                 if (codigoInput) {
                     codigoInput.focus();
