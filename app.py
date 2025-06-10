@@ -236,8 +236,8 @@ HTML_TEMPLATE = """
                 Certificado Energético: <strong>${certificado}</strong><br><br>
                 <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
                 <div id="input-codigo-container" style="margin-top: 10px; display: none;">
-                    <input type="text" id="codigo-casa" placeholder="Introduza o código" />
-                    <button onclick="validarCodigo()">Confirmar</button>
+                <input type="text" id="codigo-casa" placeholder="Introduza o código" />
+                <button onclick="validarCodigo()">Confirmar</button>
                 </div>
                 <div id="info-proprietario" style="margin-top: 10px; font-weight: bold;"></div>
             </div>`
@@ -316,7 +316,7 @@ def get_certificado():
                         'morada': reg.get('Morada', '').strip(),
                         'descricao': reg.get('Descrição', '').strip(),
                         # Ajuste aqui o nome da coluna do proprietário depois do teste!
-                        'proprietario': reg.get('Proprietario', '').strip()
+                        'proprietario': reg.get('Proprietário', '').strip()
                     })
             except Exception:
                 continue
