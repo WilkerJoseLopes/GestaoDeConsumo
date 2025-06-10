@@ -196,50 +196,70 @@ HTML_TEMPLATE = """
 
 
     async function adicionarMarcador() {
-        const lat = parseFloat(document.getElementById('latitude').value);
-        const lng = parseFloat(document.getElementById('longitude').value);
+    const lat = parseFloat(document.getElementById('latitude').value);
+    const lng = parseFloat(document.getElementById('longitude').value);
 
-        if (isNaN(lat) || isNaN(lng)) {
-            alert("Por favor, insira valores válidos para latitude e longitude.");
+    if (isNaN(lat) || isNaN(lng)) {
+        alert("Por favor, insira valores válidos para latitude e longitude.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
+        if (!response.ok) {
+            alert("Erro ao buscar dados do certificado energético.");
             return;
         }
+        const data = await response.json();
 
-        try {
-            const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
-            if (!response.ok) {
-                alert("Erro ao buscar dados do certificado energético.");
-                return;
-            }
-            const data = await response.json();
-            const certificado = data.certificado || '';
-            const corNome = coresCertificado[certificado] || 'blue';
+        const certificado = data.certificado || '';
+        const morada = data.morada || 'Morada não disponível';
+        const descricao = data.descricao || 'Descrição não disponível';
+        const proprietario = data.proprietario || 'Desconhecido';
 
-            if (marcadorUsuario) {
-                map.removeLayer(marcadorUsuario);
-            }
+        const corNome = coresCertificado[certificado] || 'blue';
 
-            const icone = criarIconeCor(corNome);
-
-            marcadorUsuario = L.marker([lat, lng], {icon: icone}).addTo(map);
-
-            marcadorUsuario.bindPopup(
-                `<div id="popup-content">
-                    <strong>Minha Casa</strong><br>
-                    Latitude: ${lat}<br>
-                    Longitude: ${lng}<br>
-                    Certificado Energético: <strong>${certificado}</strong><br><br>
-                    <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
-                    <div id="input-codigo-container" style="margin-top: 10px; display: none;">
-                        <input type="text" id="codigo-casa" placeholder="Introduza o código" />
-                    </div>
-                </div>`
-            ).openPopup();
-
-            map.setView([lat, lng], 16);
-        } catch (error) {
-            alert("Erro na comunicação com o servidor: " + error);
+        if (marcadorUsuario) {
+            map.removeLayer(marcadorUsuario);
         }
+
+        const icone = criarIconeCor(corNome);
+
+        marcadorUsuario = L.marker([lat, lng], {icon: icone}).addTo(map);
+
+        marcadorUsuario.bindPopup(
+            `<div id="popup-content">
+                <strong>${morada}</strong><br>
+                <em>${descricao}</em><br><br>
+                Latitude: ${lat}<br>
+                Longitude: ${lng}<br>
+                Certificado Energético: <strong>${certificado}</strong><br><br>
+                <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
+                <div id="input-codigo-container" style="margin-top: 10px; display: none;">
+                    <input type="text" id="codigo-casa" placeholder="Introduza o código" />
+                    <button onclick="validarCodigo()">Confirmar</button>
+                </div>
+                <div id="info-proprietario" style="margin-top: 10px; font-weight: bold;"></div>
+            </div>`
+        ).openPopup();
+
+        map.setView([lat, lng], 16);
+
+        // Função para validar código e mostrar proprietário
+        window.validarCodigo = function() {
+            const codigoInserido = document.getElementById('codigo-casa').value.trim();
+            const infoProp = document.getElementById('info-proprietario');
+            if (codigoInserido === 'ademin007') {
+                infoProp.textContent = `Proprietário: ${proprietario}`;
+            } else {
+                infoProp.textContent = 'Código incorreto.';
+            }
+        };
+
+    } catch (error) {
+        alert("Erro na comunicação com o servidor: " + error);
     }
+}
 
     function mostrarInputCodigo() {
         const container = document.getElementById("input-codigo-container");
@@ -274,11 +294,10 @@ def get_certificado():
     lng = request.args.get('lng', type=float)
 
     if folha_casa is None or lat is None or lng is None:
-        return jsonify({'certificado': ''})
+        return jsonify({'certificado': '', 'morada': '', 'descricao': '', 'proprietario': ''})
 
     try:
         registros = folha_casa.get_all_records()
-        # Busca registro com latitude e longitude iguais (com arredondamento para 5 casas decimais)
         lat_round = round(lat, 5)
         lng_round = round(lng, 5)
 
@@ -287,14 +306,19 @@ def get_certificado():
                 reg_lat = round(float(reg.get('Latitude', 0)), 5)
                 reg_lng = round(float(reg.get('Longitude', 0)), 5)
                 if reg_lat == lat_round and reg_lng == lng_round:
-                    cert = reg.get('Certificado Energético', '').strip()
-                    return jsonify({'certificado': cert})
+                    return jsonify({
+                        'certificado': reg.get('Certificado Energético', '').strip(),
+                        'morada': reg.get('Morada', '').strip(),
+                        'descricao': reg.get('Descrição', '').strip(),
+                        'proprietario': reg.get('Proprietário', '').strip()
+                    })
             except Exception:
                 continue
     except Exception as e:
         print(f"Erro ao buscar dados na planilha: {e}")
 
-    return jsonify({'certificado': ''})
+    return jsonify({'certificado': '', 'morada': '', 'descricao': '', 'proprietario': ''})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
