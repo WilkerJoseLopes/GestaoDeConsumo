@@ -163,19 +163,32 @@ HTML_TEMPLATE = """
             '': '0000FF'       // azul padrão
         };
 
-        function criarIconeCor(corHex) {
-            return L.icon({
-                iconUrl:
-                    `https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|${corHex}`,
-                iconSize: [21, 34],
-                iconAnchor: [10, 34],
-                popupAnchor: [0, -34],
-                shadowUrl:
-                    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-                shadowSize: [41, 41],
-                shadowAnchor: [14, 41]
-            });
-        }
+function criarIconeCor(corHex) {
+    // Mapeia cores conhecidas para nomes de ícones existentes (exemplo simplificado)
+    const corMapeada = {
+        '008000': 'green',
+        '00AA00': 'lightgreen',
+        '66CC00': 'lime',
+        'FFFF00': 'yellow',
+        'FFA500': 'orange',
+        'FF0000': 'red',
+        '8B0000': 'darkred',
+        '000000': 'black',
+        '0000FF': 'blue'
+    };
+
+    const nomeCor = corMapeada[corHex] || 'blue';
+
+    return L.icon({
+        iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${nomeCor}.png`,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        shadowSize: [41, 41]
+    });
+}
+
 
         async function adicionarMarcador() {
             const lat = parseFloat(document.getElementById('latitude').value);
