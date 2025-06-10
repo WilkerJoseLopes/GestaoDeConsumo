@@ -29,6 +29,35 @@ Nesta fase, o foco foi a implementação de um mapa interativo hospedado no Rend
 
 📄 Link do Render 🔗 **[Acessar o Render](https://gestaodeconsumo.onrender.com)** 
 
+## 🎯 Escala de Avaliação do Certificado Energético
+
+Tabela que representa o desempenho com base no certificado energético e cores associadas:
+
+| Certificado Energético | Cor Associada        | Descrição                                      |
+|------------------------|----------------------|------------------------------------------------|
+| A+                     | Verde Escuro         | Excelente desempenho, sucesso sólido          |
+| A                      | Verde Médio          | Muito bom, desempenho forte                   |
+| A-                     | Verde Claro          | Bom, desempenho consistente                   |
+| B+    | Verde Amarelado      | Acima da média, positivo                      |
+| B     | Verde Amarelo        | Satisfatório, leve atenção necessária         |
+| B-    | Amarelo Verdoso      | Razoável, perto da média                      |
+| C+    | Amarelo Forte        | Mediano, necessidade de melhorias             |
+| C     | Amarelo Puro         | Aviso, atenção requerida                      |
+| C-    | Amarelo Mostarda     | Quase insatisfatório, cuidado                 |
+| D+    | Laranja Claro        | Insatisfatório, alerta                        |
+| D     | Laranja              | Fraco, risco de reprovação                    |
+| D-    | Laranja Forte        | Muito fraco, necessidade urgente de melhoria  |
+| E+    | Vermelho Claro       | Péssimo, baixo desempenho                     |
+| E     | Vermelho Puro        | Crítico, reprovação certa                     |
+| E-    | Vermelho Escuro      | Muito crítico, falha grave                    |
+| F+    | Vermelho Escuro      | Falha severa, desempenho inaceitável          |
+| F     | Vermelho Muito Escuro| Máximo alerta, reprovação definitiva          |
+| F-    | Vermelho/Marrom      | Falha completa, resultado crítico             |
+| G+    | Cinza Escuro         | Muito ruim, próximo ao inexistente            |
+| G     | Preto                | Sem valor, nulidade                           |
+| G-    | Preto Cinza Escuro   | Nulo ou inválido                              |
+| ?     | Azul (Fallback)      | Cor padrão/fallback, indica ausência ou indefinido |
+
 
 # Sobre o Primeiro Projeto 📝
 🔗 **[Acessar Primeiro Projeto](https://github.com/DanilsonGG/Grupo-3)**  
