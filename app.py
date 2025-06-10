@@ -165,16 +165,21 @@ HTML_TEMPLATE = """
     };
 
     // Nova função para usar ícones confiáveis
-    function criarIconeCor(corNome) {
-        return L.icon({
-            iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${corNome}.png`,
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-            shadowSize: [41, 41]
-        });
-    }
+    function criarIconeCor(corHex) {
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+                <path fill="#${corHex}" stroke="black" stroke-width="2" d="M16,1 C24.2843,1 31,7.7157 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7157 7.7157,1 16,1 Z"/>
+            </svg>
+        `;
+    return L.divIcon({
+        html: svg,
+        iconSize: [32, 45],
+        iconAnchor: [16, 44],
+        popupAnchor: [0, -40],
+        className: '' // remove classes padrão do Leaflet
+    });
+}
+
 
     async function adicionarMarcador() {
         const lat = parseFloat(document.getElementById('latitude').value);
