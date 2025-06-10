@@ -6,7 +6,6 @@ from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
 
-# Configuração do Google Sheets
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 try:
     GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
@@ -35,22 +34,14 @@ HTML_TEMPLATE = """
             padding: 0;
             height: 100%;
         }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        body.light-mode {
             background-color: #f4f7f9;
             color: #333;
-        }
-
-        body.dark-mode {
-            background-color: #121212;
-            color: #eee;
         }
 
         header {
@@ -60,6 +51,7 @@ HTML_TEMPLATE = """
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         header h1 {
@@ -67,18 +59,17 @@ HTML_TEMPLATE = """
             font-weight: 600;
             font-size: 1.8rem;
         }
+
         header h1 a {
             color: white;
             text-decoration: none;
-        }
-        header h1 a:hover {
-            text-decoration: underline;
         }
 
         #header-right {
             display: flex;
             align-items: center;
             gap: 20px;
+            flex-wrap: wrap;
         }
 
         #header-right a, #header-right span {
@@ -90,19 +81,6 @@ HTML_TEMPLATE = """
 
         #header-right a:hover {
             text-decoration: underline;
-        }
-
-        .theme-toggle {
-            background-color: transparent;
-            border: 1px solid white;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .theme-toggle:hover {
-            background-color: rgba(255, 255, 255, 0.1);
         }
 
         main {
@@ -167,32 +145,39 @@ HTML_TEMPLATE = """
                 gap: 10px;
                 padding: 1rem;
             }
+
             #header-right {
                 width: 100%;
                 justify-content: space-between;
             }
+
             h1 {
                 font-size: 1.5em;
             }
+
             #form-coords {
                 display: flex;
                 flex-direction: column;
                 align-items: center;
             }
+
             input, button {
                 width: 90%;
                 margin: 6px 0;
             }
+
+            #map {
+                height: 300px;
+            }
         }
     </style>
 </head>
-<body class="light-mode">
+<body>
     <header>
         <h1><a href="/">Gestão de Consumo</a></h1>
         <div id="header-right">
             <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank" title="Ver projeto no GitHub">Sobre o projeto</a>
             <span title="Entrar (em breve)">Entrar</span>
-            <button class="theme-toggle" onclick="alternarTema()">🌙</button>
         </div>
     </header>
 
@@ -212,25 +197,6 @@ HTML_TEMPLATE = """
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inicializar tema do localStorage
-        function aplicarTema() {
-            const temaSalvo = localStorage.getItem("tema") || "light";
-            document.body.className = temaSalvo + "-mode";
-            document.querySelector(".theme-toggle").textContent = temaSalvo === "dark" ? "☀️" : "🌙";
-        }
-
-        function alternarTema() {
-            const body = document.body;
-            const temaAtual = body.classList.contains("dark-mode") ? "dark" : "light";
-            const novoTema = temaAtual === "dark" ? "light" : "dark";
-            body.className = novoTema + "-mode";
-            localStorage.setItem("tema", novoTema);
-            document.querySelector(".theme-toggle").textContent = novoTema === "dark" ? "☀️" : "🌙";
-        }
-
-        aplicarTema();
-
-        // Mapa
         const map = L.map('map').setView([41.1578, -8.6291], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
