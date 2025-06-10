@@ -151,7 +151,6 @@ HTML_TEMPLATE = """
 
         let marcadorUsuario = null;
 
-        // Cores em hexadecimal para cada certificado energético
         const coresCertificado = {
             'A+': '008000',    // verde escuro
             'A': '00AA00',     // verde
@@ -164,7 +163,6 @@ HTML_TEMPLATE = """
             '': '0000FF'       // azul padrão
         };
 
-        // Função para criar o ícone colorido
         function criarIconeCor(corHex) {
             return L.icon({
                 iconUrl:
@@ -217,7 +215,7 @@ HTML_TEMPLATE = """
                         Latitude: ${lat}<br>
                         Longitude: ${lng}<br>
                         Certificado Energético: <strong>${certificado}</strong><br><br>
-                        <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
+                        <button onclick="mostrarInputCodigo()"> Aceder à Casa</button>
                         <div id="input-codigo-container" style="margin-top: 10px; display: none;">
                             <input type="text" id="codigo-casa" placeholder="Introduza o código" />
                         </div>
