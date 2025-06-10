@@ -146,17 +146,11 @@ HTML_TEMPLATE = """
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    data.forEach(casa => {
-    // capa de lat/lng...
-    L.marker([...])
-      .bindPopup(...)
-      .addTo(map);
-  });
     const map = L.map('map').setView([41.1578, -8.6291], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let marcadorUsuario = null;
-    
+
     // Cores em nomes compatíveis com os ícones PNG
     const coresCertificado = {
     'A+': '008000',
@@ -183,24 +177,22 @@ HTML_TEMPLATE = """
     '': '0000FF' // fallback azul
 };
 
-    L.marker([lat, lng], { icon: criarIconeCor(coresCertificado[certificado] || coresCertificado['']) })
 
     // Nova função para usar ícones confiáveis
     function criarIconeCor(corHex) {
-    const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-            <path fill="#${corHex}" stroke="black" stroke-width="2" d="M16,1 C24.2843,1 31,7.7157 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7157 7.7157,1 16,1 Z"/>
-        </svg>
-    `;
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+                <path fill="#${corHex}" stroke="black" stroke-width="2" d="M16,1 C24.2843,1 31,7.7157 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7157 7.7157,1 16,1 Z"/>
+            </svg>
+        `;
     return L.divIcon({
         html: svg,
         iconSize: [32, 45],
         iconAnchor: [16, 44],
         popupAnchor: [0, -40],
-        className: ''
+        className: '' // remove classes padrão do Leaflet
     });
 }
-
 
 
     async function adicionarMarcador() {
