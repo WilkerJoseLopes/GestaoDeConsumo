@@ -28,106 +28,69 @@ HTML_TEMPLATE = """
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Gestão de Consumo</title>
     <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
     <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
+        html, body {
+            margin: 0; padding: 0; height: 100%;
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            background-color: #f4f7f9;
-            color: #333;
+            display: flex; flex-direction: column; min-height: 100vh;
+            background-color: #f4f7f9; color: #333;
         }
         header {
-            background-color: #0077cc;
-            color: white;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background-color: #0077cc; color: white;
+            padding: 1rem 2rem; display: flex;
+            justify-content: space-between; align-items: center;
             flex-wrap: wrap;
         }
         header h1 {
-            margin: 0;
-            font-weight: 600;
-            font-size: 1.8rem;
+            margin: 0; font-weight: 600; font-size: 1.8rem;
         }
         header h1 a {
-            color: white;
-            text-decoration: none;
+            color: white; text-decoration: none;
         }
         #header-right {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            flex-wrap: wrap;
+            display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
         }
-        #header-right a,
-        #header-right span {
-            font-size: 1rem;
-            color: white;
-            text-decoration: none;
-            cursor: pointer;
+        #header-right a, #header-right span {
+            font-size: 1rem; color: white; text-decoration: none; cursor: pointer;
         }
         #header-right a:hover {
             text-decoration: underline;
         }
         main {
-            flex: 1;
-            padding: 20px;
-            max-width: 960px;
-            margin: 0 auto;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
+            flex: 1; padding: 20px; max-width: 960px;
+            margin: 0 auto; width: 100%; display: flex; flex-direction: column;
             gap: 20px;
         }
         #form-coords {
             text-align: center;
         }
-        input[type='number'],
-        input[type='text'] {
-            padding: 10px;
-            margin: 8px;
-            width: 200px;
-            max-width: 90%;
-            border-radius: 6px;
-            border: 1px solid #ccc;
+        input[type="number"], input[type="text"] {
+            padding: 10px; margin: 8px;
+            width: 200px; max-width: 90%;
+            border-radius: 6px; border: 1px solid #ccc;
             box-sizing: border-box;
         }
         button {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 6px;
-            background-color: #0077cc;
-            color: white;
-            cursor: pointer;
+            padding: 10px 16px; border: none; border-radius: 6px;
+            background-color: #0077cc; color: white; cursor: pointer;
         }
         button:hover {
             background-color: #005fa3;
         }
         #map {
-            height: 500px;
-            width: 100%;
-            border-radius: 10px;
-            box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+            height: 500px; width: 100%; border-radius: 10px;
+            box-shadow: 0 0 12px rgba(0,0,0,0.15);
             background-color: lightgray;
         }
         footer {
-            background-color: #222;
-            color: #ccc;
-            text-align: center;
-            padding: 15px 20px;
-            font-size: 0.9em;
-            width: 100%;
+            background-color: #222; color: #ccc;
+            text-align: center; padding: 15px 20px;
+            font-size: 0.9em; width: 100%;
         }
         @media (max-width: 600px) {
             header {
@@ -148,8 +111,7 @@ HTML_TEMPLATE = """
                 flex-direction: column;
                 align-items: center;
             }
-            input,
-            button {
+            input, button {
                 width: 90%;
                 margin: 6px 0;
             }
@@ -163,12 +125,7 @@ HTML_TEMPLATE = """
     <header>
         <h1><a href="/">Gestão de Consumo</a></h1>
         <div id="header-right">
-            <a
-                href="https://github.com/WilkerJoseLopes/GestaoDeConsumo"
-                target="_blank"
-                title="Ver projeto no GitHub"
-                >Sobre o projeto</a
-            >
+            <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank" title="Ver projeto no GitHub">Sobre o projeto</a>
             <span title="Entrar (em breve)">Entrar</span>
         </div>
     </header>
@@ -176,23 +133,15 @@ HTML_TEMPLATE = """
     <main>
         <div id="form-coords">
             <input type="number" id="latitude" step="any" placeholder="Latitude" />
-            <input
-                type="number"
-                id="longitude"
-                step="any"
-                placeholder="Longitude"
-            />
-            <button onclick="buscarCertificadoEAdicionarMarcador()">
-                Mostrar no Mapa
-            </button>
+            <input type="number" id="longitude" step="any" placeholder="Longitude" />
+            <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
         </div>
 
         <div id="map"></div>
     </main>
 
     <footer>
-        Este sistema é fictício e destina-se exclusivamente a fins académicos e
-        demonstrativos. Nenhuma informação aqui representa dados reais.
+        Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -202,27 +151,24 @@ HTML_TEMPLATE = """
 
         let marcadorUsuario = null;
 
-        // Define cores para cada certificado energético
+        // Cores em hexadecimal para cada certificado energético
         const coresCertificado = {
-            'A+': 'green',
-            'A': 'green',
-            'B': 'limegreen',
-            'C': 'yellow',
-            'D': 'orange',
-            'E': 'red',
-            'F': 'darkred',
-            'G': 'black',
-            '': 'blue' // cor padrão caso não tenha certificado
+            'A+': '008000',    // verde escuro
+            'A': '00AA00',     // verde
+            'B': '66CC00',     // verde claro
+            'C': 'FFFF00',     // amarelo
+            'D': 'FFA500',     // laranja
+            'E': 'FF0000',     // vermelho
+            'F': '8B0000',     // vermelho escuro
+            'G': '000000',     // preto
+            '': '0000FF'       // azul padrão
         };
 
-        // Cria um ícone colorido personalizado para o Leaflet
-        function criarIconeCor(cor) {
+        // Função para criar o ícone colorido
+        function criarIconeCor(corHex) {
             return L.icon({
                 iconUrl:
-                    `https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|${cor.replace(
-                        '#',
-                        ''
-                    )}`,
+                    `https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=%E2%80%A2|${corHex}`,
                 iconSize: [21, 34],
                 iconAnchor: [10, 34],
                 popupAnchor: [0, -34],
@@ -233,44 +179,44 @@ HTML_TEMPLATE = """
             });
         }
 
-        async function buscarCertificadoEAdicionarMarcador() {
-            const latInput = document.getElementById('latitude');
-            const lngInput = document.getElementById('longitude');
-            const lat = parseFloat(latInput.value);
-            const lng = parseFloat(lngInput.value);
+        async function adicionarMarcador() {
+            const lat = parseFloat(document.getElementById('latitude').value);
+            const lng = parseFloat(document.getElementById('longitude').value);
 
             if (isNaN(lat) || isNaN(lng)) {
-                alert('Por favor, insira valores válidos para latitude e longitude.');
+                alert("Por favor, insira valores válidos para latitude e longitude.");
                 return;
             }
 
+            // Pede a API backend a cor do certificado energético para essas coordenadas
             try {
-                const resposta = await fetch(
-                    `/buscar_certificado?lat=${lat}&lng=${lng}`
-                );
-                const dados = await resposta.json();
-                const certificado = dados.certificado || '';
-
-                // Decide cor com base no certificado
-                let cor = coresCertificado[certificado];
-                if (!cor) {
-                    cor = 'blue'; // cor padrão
+                const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
+                if (!response.ok) {
+                    alert("Erro ao buscar dados do certificado energético.");
+                    return;
                 }
+                const data = await response.json();
+                const certificado = data.certificado || '';
 
-                // Se já existir marcador, remove
+                // Remove marcador anterior
                 if (marcadorUsuario) {
                     map.removeLayer(marcadorUsuario);
                 }
 
+                // Define cor baseada no certificado
+                const cor = coresCertificado[certificado] || coresCertificado[''];
+
+                // Cria ícone colorido
                 const icone = criarIconeCor(cor);
 
-                marcadorUsuario = L.marker([lat, lng], { icon: icone }).addTo(map);
+                marcadorUsuario = L.marker([lat, lng], {icon: icone}).addTo(map);
 
                 marcadorUsuario.bindPopup(
                     `<div id="popup-content">
                         <strong>Minha Casa</strong><br>
                         Latitude: ${lat}<br>
-                        Longitude: ${lng}<br><br>
+                        Longitude: ${lng}<br>
+                        Certificado Energético: <strong>${certificado}</strong><br><br>
                         <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
                         <div id="input-codigo-container" style="margin-top: 10px; display: none;">
                             <input type="text" id="codigo-casa" placeholder="Introduza o código" />
@@ -279,17 +225,16 @@ HTML_TEMPLATE = """
                 ).openPopup();
 
                 map.setView([lat, lng], 16);
-            } catch (err) {
-                alert('Erro ao buscar certificado energético. Tente novamente.');
-                console.error(err);
+            } catch (error) {
+                alert("Erro na comunicação com o servidor: " + error);
             }
         }
 
         function mostrarInputCodigo() {
-            const container = document.getElementById('input-codigo-container');
+            const container = document.getElementById("input-codigo-container");
             if (container) {
-                container.style.display = 'block';
-                const codigoInput = document.getElementById('codigo-casa');
+                container.style.display = "block";
+                const codigoInput = document.getElementById("codigo-casa");
                 if (codigoInput) {
                     codigoInput.focus();
                 }
@@ -300,9 +245,7 @@ HTML_TEMPLATE = """
 </html>
 """
 
-from flask import jsonify
-
-@app.route("/")
+@app.route('/')
 def home():
     if folha_casa:
         try:
@@ -314,32 +257,33 @@ def home():
         print("Google Sheets API não inicializada. Verifique suas credenciais.")
     return render_template_string(HTML_TEMPLATE)
 
-@app.route("/buscar_certificado")
-def buscar_certificado():
-    if folha_casa:
-        lat = request.args.get("lat", type=float)
-        lng = request.args.get("lng", type=float)
-        if lat is None or lng is None:
-            return jsonify({"certificado": ""})
+@app.route('/get_certificado')
+def get_certificado():
+    lat = request.args.get('lat', type=float)
+    lng = request.args.get('lng', type=float)
 
-        try:
-            dados = folha_casa.get_all_records()
-            # Busca a linha com lat/lng mais próxima (aqui tolerância simples)
-            tolerancia = 0.0005  # aprox 50 metros, ajuste conforme necessidade
-            for linha in dados:
-                try:
-                    lat_linha = float(linha.get("Latitude", 0))
-                    lng_linha = float(linha.get("Longitude", 0))
-                    if abs(lat - lat_linha) <= tolerancia and abs(lng - lng_linha) <= tolerancia:
-                        return jsonify({"certificado": linha.get("Certificado Energético", "").strip()})
-                except Exception:
-                    continue
-            return jsonify({"certificado": ""})
-        except Exception as e:
-            print(f"Erro ao buscar certificado: {e}")
-            return jsonify({"certificado": ""})
-    else:
-        return jsonify({"certificado": ""})
+    if folha_casa is None or lat is None or lng is None:
+        return jsonify({'certificado': ''})
 
-if __name__ == "__main__":
+    try:
+        registros = folha_casa.get_all_records()
+        # Busca registro com latitude e longitude iguais (com arredondamento para 5 casas decimais)
+        lat_round = round(lat, 5)
+        lng_round = round(lng, 5)
+
+        for reg in registros:
+            try:
+                reg_lat = round(float(reg.get('Latitude', 0)), 5)
+                reg_lng = round(float(reg.get('Longitude', 0)), 5)
+                if reg_lat == lat_round and reg_lng == lng_round:
+                    cert = reg.get('Certificado Energético', '').strip()
+                    return jsonify({'certificado': cert})
+            except Exception:
+                continue
+    except Exception as e:
+        print(f"Erro ao buscar dados na planilha: {e}")
+
+    return jsonify({'certificado': ''})
+
+if __name__ == '__main__':
     app.run(debug=True)
