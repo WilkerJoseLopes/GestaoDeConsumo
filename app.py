@@ -144,114 +144,95 @@ HTML_TEMPLATE = """
         Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.
     </footer>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        const map = L.map('map').setView([41.1578, -8.6291], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const map = L.map('map').setView([41.1578, -8.6291], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        let marcadorUsuario = null;
+    let marcadorUsuario = null;
 
-        const coresCertificado = {
-            'A+': '008000',    // verde escuro
-            'A': '00AA00',     // verde
-            'B': '66CC00',     // verde claro
-            'C': 'FFFF00',     // amarelo
-            'D': 'FFA500',     // laranja
-            'E': 'FF0000',     // vermelho
-            'F': '8B0000',     // vermelho escuro
-            'G': '000000',     // preto
-            '': '0000FF'       // azul padrão
-        };
-
-function criarIconeCor(corHex) {
-    // Mapeia cores conhecidas para nomes de ícones existentes (exemplo simplificado)
-    const corMapeada = {
-        '008000': 'green',
-        '00AA00': 'lightgreen',
-        '66CC00': 'lime',
-        'FFFF00': 'yellow',
-        'FFA500': 'orange',
-        'FF0000': 'red',
-        '8B0000': 'darkred',
-        '000000': 'black',
-        '0000FF': 'blue'
+    // Cores em nomes compatíveis com os ícones PNG
+    const coresCertificado = {
+        'A+': 'green',
+        'A': 'lightgreen',
+        'B': 'lime',
+        'C': 'yellow',
+        'D': 'orange',
+        'E': 'red',
+        'F': 'darkred',
+        'G': 'black',
+        '': 'blue'
     };
 
-    const nomeCor = corMapeada[corHex] || 'blue';
+    // Nova função para usar ícones confiáveis
+    function criarIconeCor(corNome) {
+        return L.icon({
+            iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${corNome}.png`,
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            shadowSize: [41, 41]
+        });
+    }
 
-    return L.icon({
-        iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${nomeCor}.png`,
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        shadowSize: [41, 41]
-    });
-}
+    async function adicionarMarcador() {
+        const lat = parseFloat(document.getElementById('latitude').value);
+        const lng = parseFloat(document.getElementById('longitude').value);
 
+        if (isNaN(lat) || isNaN(lng)) {
+            alert("Por favor, insira valores válidos para latitude e longitude.");
+            return;
+        }
 
-        async function adicionarMarcador() {
-            const lat = parseFloat(document.getElementById('latitude').value);
-            const lng = parseFloat(document.getElementById('longitude').value);
-
-            if (isNaN(lat) || isNaN(lng)) {
-                alert("Por favor, insira valores válidos para latitude e longitude.");
+        try {
+            const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
+            if (!response.ok) {
+                alert("Erro ao buscar dados do certificado energético.");
                 return;
             }
+            const data = await response.json();
+            const certificado = data.certificado || '';
+            const corNome = coresCertificado[certificado] || 'blue';
 
-            // Pede a API backend a cor do certificado energético para essas coordenadas
-            try {
-                const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
-                if (!response.ok) {
-                    alert("Erro ao buscar dados do certificado energético.");
-                    return;
-                }
-                const data = await response.json();
-                const certificado = data.certificado || '';
+            if (marcadorUsuario) {
+                map.removeLayer(marcadorUsuario);
+            }
 
-                // Remove marcador anterior
-                if (marcadorUsuario) {
-                    map.removeLayer(marcadorUsuario);
-                }
+            const icone = criarIconeCor(corNome);
 
-                // Define cor baseada no certificado
-                const cor = coresCertificado[certificado] || coresCertificado[''];
+            marcadorUsuario = L.marker([lat, lng], {icon: icone}).addTo(map);
 
-                // Cria ícone colorido
-                const icone = criarIconeCor(cor);
+            marcadorUsuario.bindPopup(
+                `<div id="popup-content">
+                    <strong>Minha Casa</strong><br>
+                    Latitude: ${lat}<br>
+                    Longitude: ${lng}<br>
+                    Certificado Energético: <strong>${certificado}</strong><br><br>
+                    <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
+                    <div id="input-codigo-container" style="margin-top: 10px; display: none;">
+                        <input type="text" id="codigo-casa" placeholder="Introduza o código" />
+                    </div>
+                </div>`
+            ).openPopup();
 
-                marcadorUsuario = L.marker([lat, lng], {icon: icone}).addTo(map);
+            map.setView([lat, lng], 16);
+        } catch (error) {
+            alert("Erro na comunicação com o servidor: " + error);
+        }
+    }
 
-                marcadorUsuario.bindPopup(
-                    `<div id="popup-content">
-                        <strong>Minha Casa</strong><br>
-                        Latitude: ${lat}<br>
-                        Longitude: ${lng}<br>
-                        Certificado Energético: <strong>${certificado}</strong><br><br>
-                        <button onclick="mostrarInputCodigo()"> Aceder à Casa</button>
-                        <div id="input-codigo-container" style="margin-top: 10px; display: none;">
-                            <input type="text" id="codigo-casa" placeholder="Introduza o código" />
-                        </div>
-                    </div>`
-                ).openPopup();
-
-                map.setView([lat, lng], 16);
-            } catch (error) {
-                alert("Erro na comunicação com o servidor: " + error);
+    function mostrarInputCodigo() {
+        const container = document.getElementById("input-codigo-container");
+        if (container) {
+            container.style.display = "block";
+            const codigoInput = document.getElementById("codigo-casa");
+            if (codigoInput) {
+                codigoInput.focus();
             }
         }
-
-        function mostrarInputCodigo() {
-            const container = document.getElementById("input-codigo-container");
-            if (container) {
-                container.style.display = "block";
-                const codigoInput = document.getElementById("codigo-casa");
-                if (codigoInput) {
-                    codigoInput.focus();
-                }
-            }
-        }
-    </script>
+    }
+</script>
 </body>
 </html>
 """
