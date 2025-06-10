@@ -298,6 +298,11 @@ def get_certificado():
 
     try:
         registros = folha_casa.get_all_records()
+        
+        # Mostrar as colunas da planilha no log para identificar nomes corretos
+        if registros:
+            print("Colunas disponíveis na planilha:", registros[0].keys())
+
         lat_round = round(lat, 5)
         lng_round = round(lng, 5)
 
@@ -310,7 +315,8 @@ def get_certificado():
                         'certificado': reg.get('Certificado Energético', '').strip(),
                         'morada': reg.get('Morada', '').strip(),
                         'descricao': reg.get('Descrição', '').strip(),
-                        'proprietario': reg.get('Proprietário', '').strip()
+                        # Ajuste aqui o nome da coluna do proprietário depois do teste!
+                        'proprietario': reg.get('Proprietario', '').strip()
                     })
             except Exception:
                 continue
