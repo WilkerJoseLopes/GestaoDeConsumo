@@ -37,12 +37,20 @@ HTML_TEMPLATE = """
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f9;
-            color: #333;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
             transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.light-mode {
+            background-color: #f4f7f9;
+            color: #333;
+        }
+
+        body.dark-mode {
+            background-color: #121212;
+            color: #eee;
         }
 
         header {
@@ -72,13 +80,29 @@ HTML_TEMPLATE = """
             align-items: center;
             gap: 20px;
         }
-        #sobre-projeto {
+
+        #header-right a, #header-right span {
             font-size: 1rem;
             color: white;
             text-decoration: none;
+            cursor: pointer;
         }
-        #sobre-projeto:hover {
+
+        #header-right a:hover {
             text-decoration: underline;
+        }
+
+        .theme-toggle {
+            background-color: transparent;
+            border: 1px solid white;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
         }
 
         main {
@@ -86,7 +110,6 @@ HTML_TEMPLATE = """
             padding: 20px;
             max-width: 960px;
             margin: 0 auto;
-            box-sizing: border-box;
             width: 100%;
             display: flex;
             flex-direction: column;
@@ -131,10 +154,9 @@ HTML_TEMPLATE = """
         footer {
             background-color: #222;
             color: #ccc;
-            text-align: left;
+            text-align: center;
             padding: 15px 20px;
             font-size: 0.9em;
-            box-sizing: border-box;
             width: 100%;
         }
 
@@ -164,11 +186,13 @@ HTML_TEMPLATE = """
         }
     </style>
 </head>
-<body>
+<body class="light-mode">
     <header>
         <h1><a href="/">Gestão de Consumo</a></h1>
         <div id="header-right">
-            <a id="sobre-projeto" href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank" title="Ver projeto no GitHub">Sobre o projeto</a>
+            <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank" title="Ver projeto no GitHub">Sobre o projeto</a>
+            <span title="Entrar (em breve)">Entrar</span>
+            <button class="theme-toggle" onclick="alternarTema()">🌙</button>
         </div>
     </header>
 
@@ -188,6 +212,25 @@ HTML_TEMPLATE = """
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // Inicializar tema do localStorage
+        function aplicarTema() {
+            const temaSalvo = localStorage.getItem("tema") || "light";
+            document.body.className = temaSalvo + "-mode";
+            document.querySelector(".theme-toggle").textContent = temaSalvo === "dark" ? "☀️" : "🌙";
+        }
+
+        function alternarTema() {
+            const body = document.body;
+            const temaAtual = body.classList.contains("dark-mode") ? "dark" : "light";
+            const novoTema = temaAtual === "dark" ? "light" : "dark";
+            body.className = novoTema + "-mode";
+            localStorage.setItem("tema", novoTema);
+            document.querySelector(".theme-toggle").textContent = novoTema === "dark" ? "☀️" : "🌙";
+        }
+
+        aplicarTema();
+
+        // Mapa
         const map = L.map('map').setView([41.1578, -8.6291], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
