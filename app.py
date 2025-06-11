@@ -20,55 +20,89 @@ except Exception as e:
 
 HTML = """<!DOCTYPE html>
 <html lang="pt">
-<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Gestão de Consumo</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-html, body {margin:0; padding:0; height:100%;}
-body {
-  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  display:flex; flex-direction:column; min-height:100vh;
-  background-color:#f4f7f9; color:#333;
+html, body {
+  margin:0; padding:0; height:100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f7f9;
+  color: #333;
+  overflow-x: hidden;
 }
 header {
-  background-color:#0077cc; color:white; padding:1rem 2rem;
-  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;
+  background-color: #0077cc;
+  color: white;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
 }
-header h1 {margin:0; font-weight:600; font-size:1.8rem;}
-header h1 a {color:white; text-decoration:none;}
+header h1 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.8rem;
+}
+header h1 a {
+  color: white;
+  text-decoration: none;
+}
 #header-right {
-  display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 #header-right a, #header-right span {
-  font-size:1rem; color:white; text-decoration:none; cursor:pointer;
+  font-size: 1rem;
+  color: white;
+  text-decoration: none;
+  cursor: pointer;
 }
-#header-right a:hover {text-decoration:underline;}
+#header-right a:hover, #header-right span:hover {
+  text-decoration: underline;
+}
 main {
-  flex:1; padding:20px; max-width:960px; margin:0 auto; width:100%;
-  display:flex; flex-direction:column; gap:20px;
+  padding: 20px;
+  max-width: 960px;
+  margin: 0 auto;
 }
 #form-coords {
-  text-align:center;
-  display:flex;
-  justify-content:center;
-  gap:10px;
-  flex-wrap:wrap;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
 }
 input[type="number"], input[type="text"], input[type="password"] {
-  padding:10px; margin:8px 0; width:200px; max-width:90%;
-  border-radius:6px; border:1px solid #ccc; box-sizing:border-box;
+  padding: 10px;
+  margin: 8px 0;
+  width: 200px;
+  max-width: 90%;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
   transition: border-color 0.3s ease;
-  font-size:1rem;
+  font-size: 1rem;
 }
 input.error {
   border-color: red !important;
   outline: none;
 }
 button {
-  padding:10px 16px; border:none; border-radius:6px;
-  background-color:#0077cc; color:white; cursor:pointer;
-  font-size:1rem;
-  min-width:120px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #0077cc;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+  min-width: 120px;
   transition: background-color 0.3s ease;
 }
 button:disabled {
@@ -76,295 +110,367 @@ button:disabled {
   cursor: not-allowed;
 }
 button:hover:not(:disabled) {
-  background-color:#005fa3;
+  background-color: #005fa3;
 }
 #map {
-  height:500px; width:100%; border-radius:10px;
-  box-shadow:0 0 12px rgba(0,0,0,0.15);
-  background-color:lightgray;
-  margin-top:10px;
+  height: 500px;
+  width: 100%;
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.15);
+  background-color: lightgray;
+  margin-top: 10px;
 }
 footer {
-  background-color:#222; color:#ccc; text-align:center;
-  padding:15px 20px; font-size:0.9em; width:100%;
+  background-color: #222;
+  color: #ccc;
+  text-align: center;
+  padding: 15px 20px;
+  font-size: 0.9em;
+  width: 100%;
+  margin-top: 40px;
 }
+/* Mensagens de alerta */
 .alert {
-  color:green;
-  font-weight:bold;
-  text-align:center;
-  margin-top:5px;
+  color: green;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 5px;
   opacity: 1;
   transition: opacity 0.5s ease;
-  user-select:none;
-  min-height:1.2em;
+  user-select: none;
+  min-height: 1.2em;
 }
 .alert.error {
-  color:red;
+  color: red;
 }
+
+/* Modal login */
+#login-modal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right:0; bottom:0;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+}
+#login-modal.active {
+  display: flex;
+}
+#login-box {
+  background-color: white;
+  padding: 30px 25px;
+  border-radius: 10px;
+  width: 320px;
+  max-width: 90%;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  text-align: center;
+}
+#login-box h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+#login-box form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#login-box input[type="password"] {
+  width: 100%;
+  font-size: 1rem;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  transition: border-color 0.3s ease;
+}
+#login-box input.error {
+  border-color: red !important;
+  outline: none;
+}
+#login-box button {
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+}
+#login-box button.login-btn {
+  background-color: #0077cc;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+#login-box button.login-btn:hover {
+  background-color: #005fa3;
+}
+#login-box button.cancel-btn {
+  background-color: #ccc;
+  color: #333;
+  cursor: pointer;
+}
+#login-box button.cancel-btn:hover {
+  background-color: #bbb;
+}
+
+/* Responsividade */
 @media (max-width:600px) {
   header {
-    flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 1rem;
   }
   #header-right {
-    width:100%; justify-content:space-between;
+    width: 100%;
+    justify-content: space-between;
   }
   h1 {
-    font-size:1.5em;
+    font-size: 1.5em;
   }
   #form-coords {
     flex-direction: column;
     align-items: center;
   }
   input, button {
-    width:90%;
+    width: 90%;
     margin: 6px 0;
     min-width: unset;
   }
   #map {
-    height:300px;
+    height: 300px;
   }
 }
 </style>
 </head>
 <body>
+
 <header>
   <h1><a href="/">Gestão de Consumo</a></h1>
   <div id="header-right">
-    <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank">Sobre o projeto</a>
+    <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank" rel="noopener">Sobre o projeto</a>
     {% if not session.get('logado') %}
-      <span id="abrir-login" style="cursor:pointer; color:#eee; text-decoration:underline;">Área Privada</span>
+      <span id="abrir-login" style="color:#eee; text-decoration:underline; cursor:pointer;">Área Privada</span>
     {% else %}
-      <span onclick="confirmarLogout()" style="cursor:pointer;">Logout</span>
+      <span id="logout-btn" style="cursor:pointer;">Logout</span>
     {% endif %}
   </div>
 </header>
+
 <main>
+  <div id="mensagem" class="alert" style="height:1.2em;">
+    {% if mensagem %}
+      {{ mensagem }}
+    {% endif %}
+  </div>
 
-<div id="mensagem" class="alert" style="height:1.2em;">
-  {% if mensagem %}
-    {{ mensagem }}
-  {% endif %}
-</div>
-
-<div id="login-container" style="display:none; max-width:320px; margin:0 auto; text-align:center;">
-  <h2>Área Privada</h2>
-  <form id="form-login" method="POST" onsubmit="return false;">
-    <input type="password" id="senha" name="senha" placeholder="Digite a senha" required autocomplete="off"/>
-    <br/>
-    <button id="btn-login" type="submit">Entrar</button>
-    <button id="btn-voltar" type="button">Voltar</button>
-    <div id="erro-senha" class="alert error" style="height:1.2em; margin-top:8px;"></div>
-  </form>
-</div>
-
-<div id="form-coords">
-  <input type="number" id="latitude" step="any" placeholder="Latitude"/>
-  <input type="number" id="longitude" step="any" placeholder="Longitude"/>
-  <button id="btn-mostrar" disabled>Mostrar no Mapa</button>
-</div>
-<div id="map"></div>
+  <div id="form-coords">
+    <input type="number" id="latitude" step="any" placeholder="Latitude"/>
+    <input type="number" id="longitude" step="any" placeholder="Longitude"/>
+    <button id="btn-mostrar" disabled>Mostrar no Mapa</button>
+  </div>
+  <div id="map"></div>
 </main>
-<footer>Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.</footer>
+
+<footer>
+  Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.
+</footer>
+
+<!-- Modal Login -->
+<div id="login-modal">
+  <div id="login-box">
+    <h2>Área Privada</h2>
+    <form id="form-login" onsubmit="return false;">
+      <input type="password" id="senha" name="senha" placeholder="Digite a senha" autocomplete="off" required/>
+      <div id="erro-senha" class="alert error" style="height:1.2em; margin-top:8px;"></div>
+      <button class="login-btn" id="btn-login" type="submit">Entrar</button>
+      <button class="cancel-btn" id="btn-cancel" type="button">Voltar</button>
+    </form>
+  </div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const map = L.map('map').setView([41.1578, -8.6291], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+const mapa = L.map('map').setView([39.5, -8], 7);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom: 18,
+  attribution: '© OpenStreetMap'
+}).addTo(mapa);
 
-const cores = {
-  'A+':'008000','A':'00AA00','A-':'33BB33','B+':'66CC00','B':'99CC00','B-':'BBD600',
-  'C+':'CCCC00','C':'FFFF00','C-':'FFDD00','D+':'FFB300','D':'FFA500','D-':'FF8800',
-  'E+':'FF6666','E':'FF0000','E-':'CC0000','F+':'A00000','F':'8B0000','F-':'660000',
-  'G+':'444444','G':'000000','G-':'222222','':'0000FF'
+const certificadoCores = {
+  'A+': '#1a9850',
+  'A': '#66bd63',
+  'B': '#d9ef8b',
+  'C': '#fee08b',
+  'D': '#fdae61',
+  'E': '#f46d43',
+  'F': '#d73027',
+  'G': '#a50026'
 };
 
-function criarIcone(c){
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-    <path fill="#${c}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
-  </svg>`;
-  return L.divIcon({html: svg, iconSize:[32,45], iconAnchor:[16,44], popupAnchor:[0,-40], className:''});
+let markers = [];
+
+function limpaMarkers(){
+  markers.forEach(m => mapa.removeLayer(m));
+  markers = [];
 }
 
-function carregarCasas(){
-  fetch('/todas_casas').then(r=>r.json()).then(casas => {
-    casas.forEach(c => {
-      const cor = cores[c.certificado]||cores[''];
-      const icon = criarIcone(cor);
-      const m = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
-      let texto = `<strong>${c.morada}</strong><br>
-                   ${c.descricao}<br>
-                   Latitude: ${c.latitude.toFixed(5)}<br>
-                   Longitude: ${c.longitude.toFixed(5)}<br>
-                   Certificado: <strong>${c.certificado}</strong>`;
-      if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
-      m.bindPopup(texto);
-    });
+function addCasasAoMapa(casas){
+  limpaMarkers();
+  casas.forEach(casa => {
+    let cor = certificadoCores[casa.certificado] || '#666';
+    let marker = L.circleMarker([casa.latitude, casa.longitude], {
+      radius: 9,
+      fillColor: cor,
+      color: '#222',
+      weight: 1,
+      opacity: 1,
+      fillOpacity: 0.8
+    }).addTo(mapa);
+    let popupConteudo = `<b>${casa.descricao}</b><br/>${casa.morada}<br/><b>Certificado:</b> ${casa.certificado || 'N/A'}`;
+    if (casa.proprietario) popupConteudo += `<br/><i>Proprietário: ${casa.proprietario}</i>`;
+    marker.bindPopup(popupConteudo);
+    markers.push(marker);
   });
 }
 
+async function carregarCasas(){
+  let resp = await fetch('/todas_casas');
+  let dados = await resp.json();
+  addCasasAoMapa(dados);
+}
 carregarCasas();
 
-function validarCampos(){
-  const lat = document.getElementById('latitude');
-  const lng = document.getElementById('longitude');
+const latInput = document.getElementById('latitude');
+const lngInput = document.getElementById('longitude');
+const btnMostrar = document.getElementById('btn-mostrar');
+
+function validaInputs(){
+  let latVal = latInput.value.trim();
+  let lngVal = lngInput.value.trim();
   let valido = true;
 
-  // Limpar erros visuais
-  lat.classList.remove('error');
-  lng.classList.remove('error');
-
-  if(lat.value.trim() === '') {
-    lat.classList.add('error');
+  if (!latVal){
+    latInput.classList.add('error');
     valido = false;
-  }
-  if(lng.value.trim() === '') {
-    lng.classList.add('error');
-    valido = false;
-  }
+  } else latInput.classList.remove('error');
 
-  document.getElementById('btn-mostrar').disabled = !valido;
+  if (!lngVal){
+    lngInput.classList.add('error');
+    valido = false;
+  } else lngInput.classList.remove('error');
+
+  btnMostrar.disabled = !valido;
   return valido;
 }
 
-document.getElementById('latitude').addEventListener('input', validarCampos);
-document.getElementById('longitude').addEventListener('input', validarCampos);
+latInput.addEventListener('input', validaInputs);
+lngInput.addEventListener('input', validaInputs);
 
-document.getElementById('btn-mostrar').addEventListener('click', function(){
-  if(!validarCampos()) return; // Não permitir clique se inválido
-
-  const lat = parseFloat(document.getElementById('latitude').value);
-  const lng = parseFloat(document.getElementById('longitude').value);
-  fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(c=>{
-    if(!c.latitude){
-      alert('Casa não encontrada');
-      return;
-    }
-    const cor = cores[c.certificado]||cores[''];
-    const icon = criarIcone(cor);
-    const mark = L.marker([c.latitude,c.longitude],{icon}).addTo(map);
-    let texto = `<strong>${c.morada}</strong><br>
-                 ${c.descricao}<br>
-                 Latitude: ${c.latitude.toFixed(5)}<br>
-                 Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>`;
-    if(c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
-    mark.bindPopup(texto).openPopup();
-    map.setView([c.latitude,c.longitude],16);
-  }).catch(_=>alert('Erro ao buscar casa'));
+btnMostrar.addEventListener('click', () => {
+  if (!validaInputs()) return;
+  let lat = parseFloat(latInput.value);
+  let lng = parseFloat(lngInput.value);
+  mapa.setView([lat, lng], 17);
 });
 
-// -------------------- Login --------------------
 
-const loginContainer = document.getElementById('login-container');
-const abrirLogin = document.getElementById('abrir-login');
-const btnVoltar = document.getElementById('btn-voltar');
-const formLogin = document.getElementById('form-login');
-const senhaInput = document.getElementById('senha');
-const btnLogin = document.getElementById('btn-login');
-const erroSenha = document.getElementById('erro-senha');
-const mensagemDiv = document.getElementById('mensagem');
-
-if(abrirLogin){
-  abrirLogin.addEventListener('click', () => {
-    loginContainer.style.display = 'block';
-    abrirLogin.style.display = 'none';
-    erroSenha.textContent = '';
-    senhaInput.value = '';
-    senhaInput.focus();
-  });
+// Mensagens temporizadas
+function mostrarMensagem(texto, tipo = 'success'){
+  const msgEl = document.getElementById('mensagem');
+  msgEl.textContent = texto;
+  msgEl.className = 'alert ' + (tipo === 'error' ? 'error' : '');
+  setTimeout(() => {
+    msgEl.textContent = '';
+    msgEl.className = 'alert';
+  }, 2000);
 }
 
-btnVoltar.addEventListener('click', () => {
-  loginContainer.style.display = 'none';
-  abrirLogin.style.display = 'inline';
-  erroSenha.textContent = '';
+
+// LOGIN modal
+const loginModal = document.getElementById('login-modal');
+const abrirLoginBtn = document.getElementById('abrir-login');
+const cancelarLoginBtn = document.getElementById('btn-cancel');
+const btnLogin = document.getElementById('btn-login');
+const senhaInput = document.getElementById('senha');
+const erroSenha = document.getElementById('erro-senha');
+
+abrirLoginBtn?.addEventListener('click', () => {
+  loginModal.classList.add('active');
   senhaInput.value = '';
+  erroSenha.textContent = '';
+  senhaInput.classList.remove('error');
+  senhaInput.focus();
 });
 
-formLogin.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  erroSenha.textContent = '';
-  btnLogin.disabled = true;
+cancelarLoginBtn.addEventListener('click', () => {
+  loginModal.classList.remove('active');
+});
 
+btnLogin.addEventListener('click', async () => {
   const senha = senhaInput.value.trim();
   if (!senha) {
-    erroSenha.textContent = 'Por favor, digite a senha.';
-    btnLogin.disabled = false;
+    erroSenha.textContent = 'Digite a senha.';
+    senhaInput.classList.add('error');
     return;
   }
-
-  // Enviar via fetch para login
   try {
-    const response = await fetch('/login', {
+    const resp = await fetch('/login', {
       method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: new URLSearchParams({senha})
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({senha})
     });
-    const text = await response.text();
-    if (text.includes('Senha incorreta')) {
-      erroSenha.textContent = 'Senha incorreta!';
-      btnLogin.disabled = false;
-      senhaInput.focus();
+    const data = await resp.json();
+    if (data.success){
+      mostrarMensagem('Login efetuado com sucesso!');
+      loginModal.classList.remove('active');
+      erroSenha.textContent = '';
+      senhaInput.classList.remove('error');
+      // Atualiza página para mostrar logout e nome do proprietário
+      setTimeout(() => location.reload(), 100);
     } else {
-      // Login OK - recarregar página para atualizar estado
-      location.reload();
+      erroSenha.textContent = 'Senha incorreta!';
+      senhaInput.classList.add('error');
     }
-  } catch (err) {
-    erroSenha.textContent = 'Erro na conexão.';
-    btnLogin.disabled = false;
+  } catch {
+    erroSenha.textContent = 'Erro no servidor.';
   }
 });
 
-// -------------------- Logout --------------------
-
-function confirmarLogout(){
-  if(confirm('Deseja realmente sair?')){
-    fetch('/logout').then(() => {
-      mensagemDiv.textContent = 'Logout realizado com sucesso.';
-      mensagemDiv.classList.remove('error');
-      loginContainer.style.display = 'none';
-      if(abrirLogin) abrirLogin.style.display = 'inline';
-      // Ocultar a mensagem após 2s
-      setTimeout(() => { mensagemDiv.textContent = ''; }, 2000);
-      location.reload();
+// Logout com confirmação
+const logoutBtn = document.getElementById('logout-btn');
+logoutBtn?.addEventListener('click', () => {
+  if (confirm('Tem certeza que deseja fazer logout?')) {
+    fetch('/logout', {method: 'POST'}).then(() => {
+      mostrarMensagem('Logout realizado com sucesso.');
+      setTimeout(() => location.reload(), 2100);
     });
   }
-}
+});
 
-// Mostrar mensagem de sucesso login/logout por 2 segundos
-window.onload = () => {
-  if (mensagemDiv.textContent.trim() !== '') {
-    setTimeout(() => {
-      mensagemDiv.style.opacity = '0';
-      setTimeout(() => {
-        mensagemDiv.textContent = '';
-        mensagemDiv.style.opacity = '1';
-      }, 500);
-    }, 2000);
-  }
-};
 </script>
 </body>
-</html>"""
+</html>
+"""
 
 @app.route('/')
 def index():
-    mensagem = session.pop('mensagem', '')
-    return render_template_string(HTML, session=session, mensagem=mensagem)
+    mensagem = session.pop('mensagem', None)
+    return render_template_string(HTML, mensagem=mensagem, session=session)
 
 @app.route('/login', methods=['POST'])
 def login():
-    senha = request.form.get('senha', '')
-    if senha == 'Adming3':
+    dados = request.json
+    senha = dados.get('senha', '')
+    if senha == '12345':  # senha hardcoded para exemplo
         session['logado'] = True
-        session['mensagem'] = 'Login efetuado com sucesso!'
-        return 'Login efetuado com sucesso!'
+        session['proprietario'] = 'Proprietário Exemplo'  # pode adaptar para pegar real
+        return jsonify({"success": True})
     else:
-        return 'Senha incorreta'
+        return jsonify({"success": False})
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 def logout():
     session.pop('logado', None)
+    session.pop('proprietario', None)
     session['mensagem'] = 'Logout realizado com sucesso.'
     return ('', 204)
 
@@ -388,28 +494,6 @@ def todas_casas():
         except Exception:
             continue
     return jsonify(casas)
-
-@app.route('/get_certificado')
-def get_certificado():
-    if folha_casa is None:
-        return jsonify({})
-    lat = request.args.get('lat', type=float)
-    lng = request.args.get('lng', type=float)
-    dados = folha_casa.get_all_records()
-    for d in dados:
-        try:
-            if abs(float(d.get('Latitude', 0)) - lat) < 0.0001 and abs(float(d.get('Longitude', 0)) - lng) < 0.0001:
-                return jsonify({
-                    'descricao': d.get('Descrição', ''),
-                    'morada': d.get('Morada', ''),
-                    'latitude': float(d.get('Latitude', 0)),
-                    'longitude': float(d.get('Longitude', 0)),
-                    'certificado': d.get('Certificado energético', '').strip().upper(),
-                    'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
-                })
-        except Exception:
-            continue
-    return jsonify({})
 
 if __name__ == '__main__':
     app.run(debug=True)
