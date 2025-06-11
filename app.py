@@ -146,7 +146,22 @@ function adicionarMarcador(){
   }).catch(_=>alert('Erro ao buscar casa'));
 }
 </script>
-</body></html>
+
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const alertEl = document.querySelector('.alert');
+    if(alertEl && alertEl.textContent.trim() !== '') {
+      setTimeout(() => {
+        alertEl.style.transition = 'opacity 0.5s ease';
+        alertEl.style.opacity = '0';
+        setTimeout(() => alertEl.remove(), 500);
+      }, 2000);
+    }
+  });
+</script>
+
+</body>
+</html>
 """
 
 @app.route('/')
