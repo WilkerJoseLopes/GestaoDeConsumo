@@ -1,10 +1,11 @@
 import os
 import json
 import gspread
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template_string, request, jsonify, session
 from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
+app.secret_key = "segredo_seguro"
 
 # Autenticação Google Sheets
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -20,41 +21,58 @@ except Exception as e:
 
 HTML = """<!DOCTYPE html>
 <html lang="pt">
-<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Gestão de Consumo</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<style>
-html, body {margin:0; padding:0; height:100%}
-body {font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display:flex; flex-direction:column; min-height:100vh; background-color:#f4f7f9; color:#333;}
-header {background-color:#0077cc; color:white; padding:1rem 2rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;}
-header h1 {margin:0; font-weight:600; font-size:1.8rem;}
-header h1 a {color:white; text-decoration:none;}
-#header-right {display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
-#header-right a, #header-right span {font-size:1rem; color:white; text-decoration:none; cursor:pointer;}
-#header-right a:hover {text-decoration:underline;}
-main {flex:1; padding:20px; max-width:960px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:20px;}
-#form-coords {text-align:center;}
-input[type="number"], input[type="text"], input[type="password"] {padding:10px; margin:8px; width:200px; max-width:90%; border-radius:6px; border:1px solid #ccc; box-sizing:border-box;}
-button {padding:10px 16px; border:none; border-radius:6px; background-color:#0077cc; color:white; cursor:pointer;}
-button:hover {background-color:#005fa3;}
-#map {height:500px; width:100%; border-radius:10px; box-shadow:0 0 12px rgba(0,0,0,0.15); background-color:lightgray;}
-footer {background-color:#222; color:#ccc; text-align:center; padding:15px 20px; font-size:0.9em; width:100%;}
-#loginModal {display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000;}
-#loginModal > div {background:white; padding:20px; border-radius:8px; box-shadow:0 0 10px black; text-align:center;}
-@media (max-width:600px) {
-  header {flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;}
-  #header-right {width:100%; justify-content:space-between;}
-  h1 {font-size:1.5em;}
-  #form-coords {display:flex; flex-direction:column; align-items:center;}
-  input, button {width:90%; margin:6px 0;}
-  #map {height:300px;}
-}
-</style></head>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Gestão de Consumo</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    html, body {margin:0; padding:0; height:100%}
+    body {font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display:flex; flex-direction:column; min-height:100vh; background-color:#f4f7f9; color:#333;}
+    header {background-color:#0077cc; color:white; padding:1rem 2rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;}
+    header h1 {margin:0; font-weight:600; font-size:1.8rem;}
+    header h1 a {color:white; text-decoration:none;}
+    #header-right {display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
+    #header-right a, #header-right span {font-size:1rem; color:white; text-decoration:none; cursor:pointer;}
+    #header-right a:hover, #header-right span:hover {text-decoration:underline;}
+    main {flex:1; padding:20px; max-width:960px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:20px;}
+    #form-coords {text-align:center;}
+    input[type="number"], input[type="text"], input[type="password"] {
+      padding:10px; margin:8px; width:200px; max-width:90%; border-radius:6px; border:1px solid #ccc; box-sizing:border-box;
+    }
+    button {padding:10px 16px; border:none; border-radius:6px; background-color:#0077cc; color:white; cursor:pointer;}
+    button:hover {background-color:#005fa3;}
+    #map {height:500px; width:100%; border-radius:10px; box-shadow:0 0 12px rgba(0,0,0,0.15); background-color:lightgray;}
+    footer {background-color:#222; color:#ccc; text-align:center; padding:15px 20px; font-size:0.9em; width:100%;}
+    #login-popup {
+      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+      background:white; padding:20px; border-radius:10px; box-shadow:0 0 20px rgba(0,0,0,0.3); z-index:1000; display:none;
+    }
+    #overlay {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.5); z-index:999; display:none;
+    }
+    #notification {
+      position: fixed; top: 10px; right: 10px;
+      background: #0077cc; color: white; padding: 10px 20px;
+      border-radius: 6px; display: none; z-index: 1001;
+    }
+    @media (max-width:600px) {
+      header {flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;}
+      #header-right {width:100%; justify-content:space-between;}
+      h1 {font-size:1.5em;}
+      #form-coords {display:flex; flex-direction:column; align-items:center;}
+      input, button {width:90%; margin:6px 0;}
+      #map {height:300px;}
+    }
+  </style>
+</head>
 <body>
 <header>
   <h1><a href="/">Gestão de Consumo</a></h1>
   <div id="header-right">
     <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank">Sobre o projeto</a>
-    <span onclick="abrirModal()">Entrar</span>
+    <span id="login-btn">{{ 'Logout' if logado else 'Área Privada' }}</span>
   </div>
 </header>
 <main>
@@ -67,24 +85,20 @@ footer {background-color:#222; color:#ccc; text-align:center; padding:15px 20px;
 </main>
 <footer>Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.</footer>
 
-<!-- Modal de Login -->
-<div id="loginModal">
-  <div>
-    <h2>Área Restrita</h2>
-    <input type="password" id="senha" placeholder="Digite a senha">
-    <br>
-    <button onclick="verificarSenha()">Entrar</button>
-    <button onclick="fecharModal()" style="background:#aaa; margin-left:10px;">Cancelar</button>
-  </div>
+<div id="overlay"></div>
+<div id="login-popup">
+  <h3>Área Privada</h3>
+  <input type="password" id="senha" placeholder="Digite a senha"/>
+  <button onclick="verificarSenha()">Entrar</button>
 </div>
+
+<div id="notification">Acesso autorizado!</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Inicializa mapa
 const map = L.map('map').setView([41.1578, -8.6291], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-// Cores por certificado
 const cores = {
   'A+':'008000','A':'00AA00','A-':'33BB33','B+':'66CC00','B':'99CC00','B-':'BBD600',
   'C+':'CCCC00','C':'FFFF00','C-':'FFDD00','D+':'FFB300','D':'FFA500','D-':'FF8800',
@@ -99,22 +113,21 @@ function criarIcone(c){
   return L.divIcon({html: svg, iconSize:[32,45], iconAnchor:[16,44], popupAnchor:[0,-40], className:''});
 }
 
-// Carrega todos os marcadores
 fetch('/todas_casas').then(r=>r.json()).then(casas => {
   casas.forEach(c => {
     const cor = cores[c.certificado]||cores[''];
     const icon = criarIcone(cor);
     const m = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
-    m.bindPopup(`<strong>${c.morada}</strong><br>
+    const info = `<strong>${c.morada}</strong><br>
                  ${c.descricao}<br>
-                 Proprietário: ${c.proprietario}<br>
                  Latitude: ${c.latitude.toFixed(5)}<br>
                  Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>`);
+                 Certificado: <strong>${c.certificado}</strong>` +
+                 (c.proprietario ? `<br>Proprietário: <em>${c.proprietario}</em>` : '');
+    m.bindPopup(info);
   });
 });
 
-// Mostra casa específica
 function adicionarMarcador(){
   const lat = parseFloat(document.getElementById('latitude').value);
   const lng = parseFloat(document.getElementById('longitude').value);
@@ -125,32 +138,42 @@ function adicionarMarcador(){
       const cor = cores[c.certificado]||cores[''];
       const icon = criarIcone(cor);
       const mark = L.marker([c.latitude,c.longitude],{icon}).addTo(map);
-      mark.bindPopup(`<strong>${c.morada}</strong><br>
-                      ${c.descricao}<br>
-                      Proprietário: ${c.proprietario}<br>
-                      Latitude: ${c.latitude.toFixed(5)}<br>
-                      Longitude: ${c.longitude.toFixed(5)}<br>
-                      Certificado: <strong>${c.certificado}</strong>`).openPopup();
+      const info = `<strong>${c.morada}</strong><br>
+                    ${c.descricao}<br>
+                    Latitude: ${c.latitude.toFixed(5)}<br>
+                    Longitude: ${c.longitude.toFixed(5)}<br>
+                    Certificado: <strong>${c.certificado}</strong>` +
+                    (c.proprietario ? `<br>Proprietário: <em>${c.proprietario}</em>` : '');
+      mark.bindPopup(info).openPopup();
       map.setView([c.latitude,c.longitude],16);
     }).catch(_=>alert('Erro ao buscar casa'));
 }
 
-// Login
-function abrirModal(){ document.getElementById('loginModal').style.display = 'flex'; }
-function fecharModal(){
-  document.getElementById('loginModal').style.display = 'none';
-  document.getElementById('senha').value = '';
-}
-function verificarSenha(){
-  const senha = document.getElementById('senha').value;
-  if(senha === 'Adming3'){
-    localStorage.setItem('admin', 'true');
-    alert('Login efetuado com sucesso!');
-    fecharModal();
-    // Futuramente, aqui você pode liberar botões extras
+document.getElementById("login-btn").addEventListener("click", function(){
+  if(this.textContent === "Logout"){
+    if(confirm("Deseja realmente sair da área privada?")){
+      fetch("/logout").then(()=>location.reload());
+    }
   } else {
-    alert('Senha incorreta.');
+    document.getElementById("overlay").style.display = "block";
+    document.getElementById("login-popup").style.display = "block";
   }
+});
+
+function verificarSenha(){
+  const senha = document.getElementById("senha").value;
+  fetch("/login", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({senha})
+  }).then(r=>r.json()).then(res=>{
+    if(res.ok){
+      document.getElementById("notification").style.display = "block";
+      setTimeout(()=>location.reload(), 1000);
+    } else {
+      alert("Senha incorreta");
+    }
+  });
 }
 </script>
 </body></html>
@@ -158,7 +181,7 @@ function verificarSenha(){
 
 @app.route('/')
 def index():
-    return render_template_string(HTML)
+    return render_template_string(HTML, logado=session.get('logado', False))
 
 @app.route('/todas_casas')
 def todas_casas():
@@ -173,7 +196,7 @@ def todas_casas():
                 'morada': reg.get('Morada',''),
                 'descricao': reg.get('Descrição',''),
                 'certificado': reg.get('Certificado Energético','').strip(),
-                'proprietario': reg.get('Proprietário','')
+                'proprietario': reg.get('Proprietário','').strip()
             })
         except:
             pass
@@ -193,11 +216,24 @@ def get_certificado():
                     'morada': reg.get('Morada',''),
                     'descricao': reg.get('Descrição',''),
                     'certificado': reg.get('Certificado Energético','').strip(),
-                    'proprietario': reg.get('Proprietário','')
+                    'proprietario': reg.get('Proprietário','').strip()
                 })
         except:
             pass
     return jsonify({})
 
-if __name__=='__main__':
+@app.route('/login', methods=["POST"])
+def login():
+    data = request.get_json()
+    if data.get("senha") == "Adming3":
+        session['logado'] = True
+        return jsonify({"ok": True})
+    return jsonify({"ok": False})
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return ('', 204)
+
+if __name__ == '__main__':
     app.run(debug=True)
