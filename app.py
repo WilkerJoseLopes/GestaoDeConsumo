@@ -1,4 +1,3 @@
-# app.py (Flask)
 import os
 import json
 import gspread
@@ -12,7 +11,6 @@ try:
     GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
     creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
     client = gspread.authorize(creds)
-
     planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
     folha_casa = planilha.worksheet("Dados Casa")
 except Exception as e:
@@ -21,29 +19,119 @@ except Exception as e:
     planilha = None
     folha_casa = None
 
-HTML_TEMPLATE = """ <!-- MANTIDO IGUAL AO SEU ORIGINAL ATÉ O <script> -->
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gestão de Consumo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        html, body { margin: 0; padding: 0; height: 100%; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column; min-height: 100vh;
+            background-color: #f4f7f9; color: #333;
+        }
+        header {
+            background-color: #0077cc; color: white;
+            padding: 1rem 2rem; display: flex;
+            justify-content: space-between; align-items: center;
+            flex-wrap: wrap;
+        }
+        header h1 { margin: 0; font-weight: 600; font-size: 1.8rem; }
+        header h1 a { color: white; text-decoration: none; }
+        #header-right {
+            display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+        }
+        #header-right a, #header-right span {
+            font-size: 1rem; color: white; text-decoration: none; cursor: pointer;
+        }
+        #header-right a:hover { text-decoration: underline; }
+        main {
+            flex: 1; padding: 20px; max-width: 960px;
+            margin: 0 auto; width: 100%; display: flex; flex-direction: column;
+            gap: 20px;
+        }
+        #form-coords { text-align: center; }
+        input[type="number"], input[type="text"] {
+            padding: 10px; margin: 8px;
+            width: 200px; max-width: 90%;
+            border-radius: 6px; border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 16px; border: none; border-radius: 6px;
+            background-color: #0077cc; color: white; cursor: pointer;
+        }
+        button:hover { background-color: #005fa3; }
+        #map {
+            height: 500px; width: 100%; border-radius: 10px;
+            box-shadow: 0 0 12px rgba(0,0,0,0.15);
+            background-color: lightgray;
+        }
+        footer {
+            background-color: #222; color: #ccc;
+            text-align: center; padding: 15px 20px;
+            font-size: 0.9em; width: 100%;
+        }
+        @media (max-width: 600px) {
+            header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 1rem; }
+            #header-right { width: 100%; justify-content: space-between; }
+            h1 { font-size: 1.5em; }
+            #form-coords {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            input, button { width: 90%; margin: 6px 0; }
+            #map { height: 300px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><a href="/">Gestão de Consumo</a></h1>
+        <div id="header-right">
+            <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank">Sobre o projeto</a>
+            <span>Entrar</span>
+        </div>
+    </header>
+
+    <main>
+        <div id="form-coords">
+            <input type="number" id="latitude" step="any" placeholder="Latitude" />
+            <input type="number" id="longitude" step="any" placeholder="Longitude" />
+            <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
+        </div>
+        <div id="map"></div>
+    </main>
+
+    <footer>
+        Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.
+    </footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     const map = L.map('map').setView([41.1578, -8.6291], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    let marcadorUsuario = null;
-
     const coresCertificado = {
-        'A+': '008000','A': '00AA00','A-': '33BB33','B+': '66CC00','B': '99CC00',
-        'B-': 'BBD600','C+': 'CCCC00','C': 'FFFF00','C-': 'FFDD00','D+': 'FFB300',
-        'D': 'FFA500','D-': 'FF8800','E+': 'FF6666','E': 'FF0000','E-': 'CC0000',
-        'F+': 'A00000','F': '8B0000','F-': '660000','G+': '444444','G': '000000',
-        'G-': '222222','': '0000FF'
+        'A+': '008000', 'A': '00AA00', 'A-': '33BB33',
+        'B+': '66CC00', 'B': '99CC00', 'B-': 'BBD600',
+        'C+': 'CCCC00', 'C': 'FFFF00', 'C-': 'FFDD00',
+        'D+': 'FFB300', 'D': 'FFA500', 'D-': 'FF8800',
+        'E+': 'FF6666', 'E': 'FF0000', 'E-': 'CC0000',
+        'F+': 'A00000', 'F': '8B0000', 'F-': '660000',
+        'G+': '444444', 'G': '000000', 'G-': '222222',
+        '': '0000FF'
     };
 
     function criarIconeCor(corHex) {
-        const svg = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-                <path fill="#${corHex}" stroke="black" stroke-width="2" d="M16,1 C24.2843,1 31,7.7157 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7157 7.7157,1 16,1 Z"/>
-            </svg>
-        `;
+        const svg = \`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+            <path fill="#\${corHex}" stroke="black" stroke-width="2" d="M16,1 C24.2843,1 31,7.7157 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7157 7.7157,1 16,1 Z"/>
+        </svg>\`;
         return L.divIcon({
             html: svg,
             iconSize: [32, 45],
@@ -56,144 +144,74 @@ HTML_TEMPLATE = """ <!-- MANTIDO IGUAL AO SEU ORIGINAL ATÉ O <script> -->
     async function adicionarMarcador() {
         const lat = parseFloat(document.getElementById('latitude').value);
         const lng = parseFloat(document.getElementById('longitude').value);
-
         if (isNaN(lat) || isNaN(lng)) {
-            alert("Por favor, insira valores válidos para latitude e longitude.");
+            alert("Latitude e longitude inválidas.");
             return;
         }
 
-        try {
-            const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
-            if (!response.ok) {
-                alert("Erro ao buscar dados do certificado energético.");
-                return;
-            }
-            const data = await response.json();
-            const certificado = data.certificado || '';
-            const morada = data.morada || 'Morada não disponível';
-            const descricao = data.descricao || 'Descrição não disponível';
-            const proprietario = data.proprietario || 'Desconhecido';
-            const corNome = coresCertificado[certificado] || 'blue';
+        const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
+        const data = await response.json();
 
-            if (marcadorUsuario) {
-                map.removeLayer(marcadorUsuario);
-            }
+        const certificado = data.certificado || '';
+        const cor = coresCertificado[certificado] || '0000FF';
+        const icone = criarIconeCor(cor);
 
-            const icone = criarIconeCor(corNome);
-            marcadorUsuario = L.marker([lat, lng], {icon: icone}).addTo(map);
-            marcadorUsuario.bindPopup(
-                `<div id="popup-content">
-                    <strong>${morada}</strong><br>
-                    <em>${descricao}</em><br><br>
-                    Latitude: ${lat}<br>
-                    Longitude: ${lng}<br>
-                    Certificado Energético: <strong>${certificado}</strong><br><br>
-                    <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
-                    <div id="input-codigo-container" style="margin-top: 10px; display: none;">
-                        <input type="text" id="codigo-casa" placeholder="Introduza o código" />
-                        <button onclick="validarCodigo()">Confirmar</button>
-                    </div>
-                    <div id="info-proprietario" style="margin-top: 10px; font-weight: bold;"></div>
-                </div>`
-            ).openPopup();
+        const marker = L.marker([lat, lng], { icon: icone }).addTo(map);
+        marker.bindPopup(\`<strong>\${data.morada}</strong><br>Certificado: <strong>\${certificado}</strong>\`).openPopup();
 
-            map.setView([lat, lng], 16);
-
-            window.validarCodigo = function() {
-                const codigoInserido = document.getElementById('codigo-casa').value.trim();
-                const infoProp = document.getElementById('info-proprietario');
-                if (codigoInserido === 'ademin007') {
-                    infoProp.textContent = `Proprietário: ${proprietario}`;
-                } else {
-                    infoProp.textContent = 'Código incorreto.';
-                }
-            };
-
-        } catch (error) {
-            alert("Erro na comunicação com o servidor: " + error);
-        }
-    }
-
-    function mostrarInputCodigo() {
-        const container = document.getElementById("input-codigo-container");
-        if (container) {
-            container.style.display = "block";
-            const codigoInput = document.getElementById("codigo-casa");
-            if (codigoInput) {
-                codigoInput.focus();
-            }
-        }
+        map.setView([lat, lng], 16);
     }
 
     async function carregarTodasAsCasas() {
-        try {
-            const response = await fetch('/get_all_casas');
-            const dados = await response.json();
+        const res = await fetch('/todas_casas');
+        const casas = await res.json();
+        casas.forEach(casa => {
+            const certificado = casa.certificado || '';
+            const cor = coresCertificado[certificado] || '0000FF';
+            const icone = criarIconeCor(cor);
 
-            dados.forEach(casa => {
-                const lat = parseFloat(casa.latitude);
-                const lng = parseFloat(casa.longitude);
-                const cor = coresCertificado[casa.certificado] || '0000FF';
-                const icone = criarIconeCor(cor);
-
-                const marcador = L.marker([lat, lng], {icon: icone}).addTo(map);
-                marcador.bindPopup(
-                    `<strong>${casa.morada}</strong><br>
-                    <em>${casa.descricao}</em><br>
-                    Certificado: <strong>${casa.certificado}</strong>`
-                );
-            });
-
-        } catch (error) {
-            console.error("Erro ao carregar casas:", error);
-        }
+            const marker = L.marker([casa.lat, casa.lng], { icon: icone }).addTo(map);
+            marker.bindPopup(\`<strong>\${casa.morada}</strong><br>Certificado: <strong>\${certificado}</strong>\`);
+        });
     }
 
-    // Chamada inicial
     carregarTodasAsCasas();
 </script>
 </body>
 </html>
 """
 
-@app.route('/')
-def home():
+@app.route("/")
+def index():
     return render_template_string(HTML_TEMPLATE)
 
-@app.route('/get_certificado')
+@app.route("/get_certificado")
 def get_certificado():
     lat = request.args.get('lat', type=float)
     lng = request.args.get('lng', type=float)
 
     if folha_casa is None or lat is None or lng is None:
-        return jsonify({'certificado': '', 'morada': '', 'descricao': '', 'proprietario': ''})
+        return jsonify({})
 
     try:
         registros = folha_casa.get_all_records()
-        lat_round = round(lat, 5)
-        lng_round = round(lng, 5)
-
         for reg in registros:
-            try:
-                reg_lat = round(float(reg.get('Latitude', 0)), 5)
-                reg_lng = round(float(reg.get('Longitude', 0)), 5)
-                if reg_lat == lat_round and reg_lng == lng_round:
-                    return jsonify({
-                        'certificado': reg.get('Certificado Energético', '').strip(),
-                        'morada': reg.get('Morada', '').strip(),
-                        'descricao': reg.get('Descrição', '').strip(),
-                        'proprietario': reg.get('Proprietário', '').strip()
-                    })
-            except Exception:
-                continue
+            reg_lat = round(float(reg.get("Latitude", 0)), 5)
+            reg_lng = round(float(reg.get("Longitude", 0)), 5)
+            if round(lat, 5) == reg_lat and round(lng, 5) == reg_lng:
+                return jsonify({
+                    "morada": reg.get("Morada", ""),
+                    "descricao": reg.get("Descrição", ""),
+                    "proprietario": reg.get("Proprietário", ""),
+                    "certificado": reg.get("Certificado Energético", "")
+                })
     except Exception as e:
-        print(f"Erro ao buscar dados na planilha: {e}")
+        print(f"Erro ao buscar certificado: {e}")
+    return jsonify({})
 
-    return jsonify({'certificado': '', 'morada': '', 'descricao': '', 'proprietario': ''})
-
-@app.route('/get_all_casas')
-def get_all_casas():
-    if not folha_casa:
+@app.route("/todas_casas")
+def todas_casas():
+    if folha_casa is None:
         return jsonify([])
 
     try:
@@ -202,18 +220,17 @@ def get_all_casas():
         for reg in registros:
             try:
                 casas.append({
-                    'latitude': float(reg.get('Latitude', 0)),
-                    'longitude': float(reg.get('Longitude', 0)),
-                    'certificado': reg.get('Certificado Energético', '').strip(),
-                    'morada': reg.get('Morada', '').strip(),
-                    'descricao': reg.get('Descrição', '').strip()
+                    "lat": float(reg.get("Latitude", 0)),
+                    "lng": float(reg.get("Longitude", 0)),
+                    "morada": reg.get("Morada", ""),
+                    "certificado": reg.get("Certificado Energético", "")
                 })
-            except:
+            except Exception:
                 continue
         return jsonify(casas)
     except Exception as e:
-        print(f"Erro ao carregar todas as casas: {e}")
+        print(f"Erro ao buscar casas: {e}")
         return jsonify([])
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
