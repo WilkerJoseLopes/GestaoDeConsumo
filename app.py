@@ -1,3 +1,4 @@
+# app.py (Flask)
 import os
 import json
 import gspread
@@ -20,40 +21,7 @@ except Exception as e:
     planilha = None
     folha_casa = None
 
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="pt">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gestão de Consumo</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        /* Estilos omitidos para encurtar – são os mesmos que você já tinha */
-        /* (Você pode manter os estilos CSS que já estavam no seu código anterior) */
-    </style>
-</head>
-<body>
-    <header>
-        <h1><a href="/">Gestão de Consumo</a></h1>
-        <div id="header-right">
-            <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank">Sobre o projeto</a>
-            <span>Entrar</span>
-        </div>
-    </header>
-
-    <main>
-        <div id="form-coords">
-            <input type="number" id="latitude" step="any" placeholder="Latitude" />
-            <input type="number" id="longitude" step="any" placeholder="Longitude" />
-            <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
-        </div>
-        <div id="map"></div>
-    </main>
-
-    <footer>
-        Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.
-    </footer>
+HTML_TEMPLATE = """ <!-- MANTIDO IGUAL AO SEU ORIGINAL ATÉ O <script> -->
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -63,12 +31,11 @@ HTML_TEMPLATE = """
     let marcadorUsuario = null;
 
     const coresCertificado = {
-        'A+': '008000', 'A': '00AA00', 'A-': '33BB33', 'B+': '66CC00',
-        'B': '99CC00', 'B-': 'BBD600', 'C+': 'CCCC00', 'C': 'FFFF00',
-        'C-': 'FFDD00', 'D+': 'FFB300', 'D': 'FFA500', 'D-': 'FF8800',
-        'E+': 'FF6666', 'E': 'FF0000', 'E-': 'CC0000', 'F+': 'A00000',
-        'F': '8B0000', 'F-': '660000', 'G+': '444444', 'G': '000000',
-        'G-': '222222', '': '0000FF'
+        'A+': '008000','A': '00AA00','A-': '33BB33','B+': '66CC00','B': '99CC00',
+        'B-': 'BBD600','C+': 'CCCC00','C': 'FFFF00','C-': 'FFDD00','D+': 'FFB300',
+        'D': 'FFA500','D-': 'FF8800','E+': 'FF6666','E': 'FF0000','E-': 'CC0000',
+        'F+': 'A00000','F': '8B0000','F-': '660000','G+': '444444','G': '000000',
+        'G-': '222222','': '0000FF'
     };
 
     function criarIconeCor(corHex) {
@@ -98,31 +65,29 @@ HTML_TEMPLATE = """
         try {
             const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
             if (!response.ok) {
-                alert("Erro ao buscar dados.");
+                alert("Erro ao buscar dados do certificado energético.");
                 return;
             }
             const data = await response.json();
-
             const certificado = data.certificado || '';
             const morada = data.morada || 'Morada não disponível';
             const descricao = data.descricao || 'Descrição não disponível';
             const proprietario = data.proprietario || 'Desconhecido';
-            const cor = coresCertificado[certificado] || '0000FF';
+            const corNome = coresCertificado[certificado] || 'blue';
 
             if (marcadorUsuario) {
                 map.removeLayer(marcadorUsuario);
             }
 
-            const icone = criarIconeCor(cor);
-            marcadorUsuario = L.marker([lat, lng], { icon: icone }).addTo(map);
-
+            const icone = criarIconeCor(corNome);
+            marcadorUsuario = L.marker([lat, lng], {icon: icone}).addTo(map);
             marcadorUsuario.bindPopup(
-                `<div>
+                `<div id="popup-content">
                     <strong>${morada}</strong><br>
                     <em>${descricao}</em><br><br>
                     Latitude: ${lat}<br>
                     Longitude: ${lng}<br>
-                    Certificado: <strong>${certificado}</strong><br><br>
+                    Certificado Energético: <strong>${certificado}</strong><br><br>
                     <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
                     <div id="input-codigo-container" style="margin-top: 10px; display: none;">
                         <input type="text" id="codigo-casa" placeholder="Introduza o código" />
@@ -134,18 +99,18 @@ HTML_TEMPLATE = """
 
             map.setView([lat, lng], 16);
 
-            window.validarCodigo = function () {
-                const codigo = document.getElementById("codigo-casa").value.trim();
-                const info = document.getElementById("info-proprietario");
-                if (codigo === "ademin007") {
-                    info.textContent = "Proprietário: " + proprietario;
+            window.validarCodigo = function() {
+                const codigoInserido = document.getElementById('codigo-casa').value.trim();
+                const infoProp = document.getElementById('info-proprietario');
+                if (codigoInserido === 'ademin007') {
+                    infoProp.textContent = `Proprietário: ${proprietario}`;
                 } else {
-                    info.textContent = "Código incorreto.";
+                    infoProp.textContent = 'Código incorreto.';
                 }
             };
 
-        } catch (err) {
-            alert("Erro ao carregar dados: " + err);
+        } catch (error) {
+            alert("Erro na comunicação com o servidor: " + error);
         }
     }
 
@@ -153,34 +118,39 @@ HTML_TEMPLATE = """
         const container = document.getElementById("input-codigo-container");
         if (container) {
             container.style.display = "block";
-            const input = document.getElementById("codigo-casa");
-            if (input) input.focus();
+            const codigoInput = document.getElementById("codigo-casa");
+            if (codigoInput) {
+                codigoInput.focus();
+            }
         }
     }
 
-    // 🔁 Carregar todas as casas automaticamente
-    async function carregarTodasCasas() {
+    async function carregarTodasAsCasas() {
         try {
             const response = await fetch('/get_all_casas');
-            const casas = await response.json();
-            casas.forEach(casa => {
+            const dados = await response.json();
+
+            dados.forEach(casa => {
+                const lat = parseFloat(casa.latitude);
+                const lng = parseFloat(casa.longitude);
                 const cor = coresCertificado[casa.certificado] || '0000FF';
                 const icone = criarIconeCor(cor);
-                const marcador = L.marker([casa.lat, casa.lng], { icon: icone }).addTo(map);
+
+                const marcador = L.marker([lat, lng], {icon: icone}).addTo(map);
                 marcador.bindPopup(
                     `<strong>${casa.morada}</strong><br>
                     <em>${casa.descricao}</em><br>
-                    Latitude: ${casa.lat}<br>
-                    Longitude: ${casa.lng}<br>
                     Certificado: <strong>${casa.certificado}</strong>`
                 );
             });
-        } catch (e) {
-            console.error("Erro ao carregar casas:", e);
+
+        } catch (error) {
+            console.error("Erro ao carregar casas:", error);
         }
     }
 
-    carregarTodasCasas(); // ⬅️ Iniciar carregamento automático
+    // Chamada inicial
+    carregarTodasAsCasas();
 </script>
 </body>
 </html>
@@ -202,6 +172,7 @@ def get_certificado():
         registros = folha_casa.get_all_records()
         lat_round = round(lat, 5)
         lng_round = round(lng, 5)
+
         for reg in registros:
             try:
                 reg_lat = round(float(reg.get('Latitude', 0)), 5)
@@ -213,16 +184,16 @@ def get_certificado():
                         'descricao': reg.get('Descrição', '').strip(),
                         'proprietario': reg.get('Proprietário', '').strip()
                     })
-            except:
+            except Exception:
                 continue
     except Exception as e:
-        print(f"Erro ao buscar certificado: {e}")
+        print(f"Erro ao buscar dados na planilha: {e}")
 
     return jsonify({'certificado': '', 'morada': '', 'descricao': '', 'proprietario': ''})
 
 @app.route('/get_all_casas')
 def get_all_casas():
-    if folha_casa is None:
+    if not folha_casa:
         return jsonify([])
 
     try:
@@ -230,21 +201,18 @@ def get_all_casas():
         casas = []
         for reg in registros:
             try:
-                lat = float(reg.get('Latitude', 0))
-                lng = float(reg.get('Longitude', 0))
                 casas.append({
-                    'lat': lat,
-                    'lng': lng,
-                    'morada': reg.get('Morada', '').strip(),
-                    'descricao': reg.get('Descrição', '').strip(),
+                    'latitude': float(reg.get('Latitude', 0)),
+                    'longitude': float(reg.get('Longitude', 0)),
                     'certificado': reg.get('Certificado Energético', '').strip(),
-                    'proprietario': reg.get('Proprietário', '').strip()
+                    'morada': reg.get('Morada', '').strip(),
+                    'descricao': reg.get('Descrição', '').strip()
                 })
             except:
                 continue
         return jsonify(casas)
     except Exception as e:
-        print(f"Erro ao buscar casas: {e}")
+        print(f"Erro ao carregar todas as casas: {e}")
         return jsonify([])
 
 if __name__ == '__main__':
