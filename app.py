@@ -33,11 +33,13 @@ header h1 a {color:white; text-decoration:none;}
 #header-right a:hover {text-decoration:underline;}
 main {flex:1; padding:20px; max-width:960px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:20px;}
 #form-coords {text-align:center;}
-input[type="number"], input[type="text"] {padding:10px; margin:8px; width:200px; max-width:90%; border-radius:6px; border:1px solid #ccc; box-sizing:border-box;}
+input[type="number"], input[type="text"], input[type="password"] {padding:10px; margin:8px; width:200px; max-width:90%; border-radius:6px; border:1px solid #ccc; box-sizing:border-box;}
 button {padding:10px 16px; border:none; border-radius:6px; background-color:#0077cc; color:white; cursor:pointer;}
 button:hover {background-color:#005fa3;}
 #map {height:500px; width:100%; border-radius:10px; box-shadow:0 0 12px rgba(0,0,0,0.15); background-color:lightgray;}
 footer {background-color:#222; color:#ccc; text-align:center; padding:15px 20px; font-size:0.9em; width:100%;}
+#loginModal {display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000;}
+#loginModal > div {background:white; padding:20px; border-radius:8px; box-shadow:0 0 10px black; text-align:center;}
 @media (max-width:600px) {
   header {flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;}
   #header-right {width:100%; justify-content:space-between;}
@@ -52,7 +54,7 @@ footer {background-color:#222; color:#ccc; text-align:center; padding:15px 20px;
   <h1><a href="/">Gestão de Consumo</a></h1>
   <div id="header-right">
     <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank">Sobre o projeto</a>
-    <span>Entrar</span>
+    <span onclick="abrirModal()">Entrar</span>
   </div>
 </header>
 <main>
@@ -64,6 +66,17 @@ footer {background-color:#222; color:#ccc; text-align:center; padding:15px 20px;
   <div id="map"></div>
 </main>
 <footer>Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.</footer>
+
+<!-- Modal de Login -->
+<div id="loginModal">
+  <div>
+    <h2>Área Restrita</h2>
+    <input type="password" id="senha" placeholder="Digite a senha">
+    <br>
+    <button onclick="verificarSenha()">Entrar</button>
+    <button onclick="fecharModal()" style="background:#aaa; margin-left:10px;">Cancelar</button>
+  </div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -94,6 +107,7 @@ fetch('/todas_casas').then(r=>r.json()).then(casas => {
     const m = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
     m.bindPopup(`<strong>${c.morada}</strong><br>
                  ${c.descricao}<br>
+                 Proprietário: ${c.proprietario}<br>
                  Latitude: ${c.latitude.toFixed(5)}<br>
                  Longitude: ${c.longitude.toFixed(5)}<br>
                  Certificado: <strong>${c.certificado}</strong>`);
@@ -113,11 +127,30 @@ function adicionarMarcador(){
       const mark = L.marker([c.latitude,c.longitude],{icon}).addTo(map);
       mark.bindPopup(`<strong>${c.morada}</strong><br>
                       ${c.descricao}<br>
+                      Proprietário: ${c.proprietario}<br>
                       Latitude: ${c.latitude.toFixed(5)}<br>
                       Longitude: ${c.longitude.toFixed(5)}<br>
                       Certificado: <strong>${c.certificado}</strong>`).openPopup();
       map.setView([c.latitude,c.longitude],16);
     }).catch(_=>alert('Erro ao buscar casa'));
+}
+
+// Login
+function abrirModal(){ document.getElementById('loginModal').style.display = 'flex'; }
+function fecharModal(){
+  document.getElementById('loginModal').style.display = 'none';
+  document.getElementById('senha').value = '';
+}
+function verificarSenha(){
+  const senha = document.getElementById('senha').value;
+  if(senha === 'Adming3'){
+    localStorage.setItem('admin', 'true');
+    alert('Login efetuado com sucesso!');
+    fecharModal();
+    // Futuramente, aqui você pode liberar botões extras
+  } else {
+    alert('Senha incorreta.');
+  }
 }
 </script>
 </body></html>
@@ -139,7 +172,8 @@ def todas_casas():
                 'longitude': float(reg.get('Longitude',0)),
                 'morada': reg.get('Morada',''),
                 'descricao': reg.get('Descrição',''),
-                'certificado': reg.get('Certificado Energético','').strip()
+                'certificado': reg.get('Certificado Energético','').strip(),
+                'proprietario': reg.get('Proprietário','')
             })
         except:
             pass
@@ -158,7 +192,8 @@ def get_certificado():
                     'longitude': float(reg.get('Longitude',0)),
                     'morada': reg.get('Morada',''),
                     'descricao': reg.get('Descrição',''),
-                    'certificado': reg.get('Certificado Energético','').strip()
+                    'certificado': reg.get('Certificado Energético','').strip(),
+                    'proprietario': reg.get('Proprietário','')
                 })
         except:
             pass
