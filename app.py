@@ -15,10 +15,11 @@ try:
     planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
     folha_casa = planilha.worksheet("Dados Casa")
 except Exception as e:
-    print("Erro init Google Sheets:", e)
+    print("Erro ao conectar Google Sheets:", e)
     folha_casa = None
 
-HTML = """<!DOCTYPE html>
+HTML = """
+<!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8"/>
@@ -275,11 +276,11 @@ footer {
 </footer>
 
 <!-- Modal Login -->
-<div id="login-modal">
-  <div id="login-box">
-    <h2>Área Privada</h2>
+<div id="login-modal" aria-hidden="true">
+  <div id="login-box" role="dialog" aria-modal="true" aria-labelledby="login-title">
+    <h2 id="login-title">Área Privada</h2>
     <form id="form-login" onsubmit="return false;">
-      <input type="password" id="senha" name="senha" placeholder="Digite a senha" autocomplete="off" required/>
+      <input type="password" id="senha" name="senha" placeholder="Digite a senha" autocomplete="off" required aria-describedby="erro-senha"/>
       <div id="erro-senha" class="alert error" style="height:1.2em; margin-top:8px;"></div>
       <button class="login-btn" id="btn-login" type="submit">Entrar</button>
       <button class="cancel-btn" id="btn-cancel" type="button">Voltar</button>
@@ -333,9 +334,13 @@ function addCasasAoMapa(casas){
 }
 
 async function carregarCasas(){
-  let resp = await fetch('/todas_casas');
-  let dados = await resp.json();
-  addCasasAoMapa(dados);
+  try {
+    let resp = await fetch('/todas_casas');
+    let dados = await resp.json();
+    addCasasAoMapa(dados);
+  } catch(e) {
+    console.error("Erro ao carregar casas:", e);
+  }
 }
 carregarCasas();
 
@@ -372,7 +377,6 @@ btnMostrar.addEventListener('click', () => {
   mapa.setView([lat, lng], 17);
 });
 
-
 // Mensagens temporizadas
 function mostrarMensagem(texto, tipo = 'success'){
   const msgEl = document.getElementById('mensagem');
@@ -383,7 +387,6 @@ function mostrarMensagem(texto, tipo = 'success'){
     msgEl.className = 'alert';
   }, 2000);
 }
-
 
 // LOGIN modal
 const loginModal = document.getElementById('login-modal');
@@ -425,7 +428,7 @@ btnLogin.addEventListener('click', async () => {
       erroSenha.textContent = '';
       senhaInput.classList.remove('error');
       // Atualiza página para mostrar logout e nome do proprietário
-      setTimeout(() => location.reload(), 100);
+      setTimeout(() => location.reload(), 500);
     } else {
       erroSenha.textContent = 'Senha incorreta!';
       senhaInput.classList.add('error');
@@ -462,7 +465,7 @@ def login():
     senha = dados.get('senha', '')
     if senha == '12345':  # senha hardcoded para exemplo
         session['logado'] = True
-        session['proprietario'] = 'Proprietário Exemplo'  # pode adaptar para pegar real
+        session['proprietario'] = 'Proprietário Exemplo'
         return jsonify({"success": True})
     else:
         return jsonify({"success": False})
