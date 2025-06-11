@@ -1,7 +1,7 @@
 import os
 import json
 import gspread
-from flask import Flask, render_template_string, request, jsonify, session, redirect
+from flask import Flask, render_template_string, request, jsonify, session
 from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
@@ -20,32 +20,109 @@ except Exception as e:
 
 HTML = """<!DOCTYPE html>
 <html lang="pt">
-<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Gestão de Consumo</title>
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Gestão de Consumo</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-html, body {margin:0; padding:0; height:100%}
-body {font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display:flex; flex-direction:column; min-height:100vh; background-color:#f4f7f9; color:#333;}
-header {background-color:#0077cc; color:white; padding:1rem 2rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;}
+html, body {margin:0; padding:0; height:100%;}
+body {
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display:flex; flex-direction:column; min-height:100vh;
+  background-color:#f4f7f9; color:#333;
+}
+header {
+  background-color:#0077cc; color:white; padding:1rem 2rem;
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;
+}
 header h1 {margin:0; font-weight:600; font-size:1.8rem;}
 header h1 a {color:white; text-decoration:none;}
-#header-right {display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
-#header-right a, #header-right span {font-size:1rem; color:white; text-decoration:none; cursor:pointer;}
+#header-right {
+  display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+}
+#header-right a, #header-right span {
+  font-size:1rem; color:white; text-decoration:none; cursor:pointer;
+}
 #header-right a:hover {text-decoration:underline;}
-main {flex:1; padding:20px; max-width:960px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:20px;}
-#form-coords {text-align:center;}
-input[type="number"], input[type="text"], input[type="password"] {padding:10px; margin:8px; width:200px; max-width:90%; border-radius:6px; border:1px solid #ccc; box-sizing:border-box;}
-button {padding:10px 16px; border:none; border-radius:6px; background-color:#0077cc; color:white; cursor:pointer;}
-button:hover {background-color:#005fa3;}
-#map {height:500px; width:100%; border-radius:10px; box-shadow:0 0 12px rgba(0,0,0,0.15); background-color:lightgray;}
-footer {background-color:#222; color:#ccc; text-align:center; padding:15px 20px; font-size:0.9em; width:100%;}
-.alert {color:red; font-weight:bold; text-align:center;}
+main {
+  flex:1; padding:20px; max-width:960px; margin:0 auto; width:100%;
+  display:flex; flex-direction:column; gap:20px;
+}
+#form-coords {
+  text-align:center;
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+input[type="number"], input[type="text"], input[type="password"] {
+  padding:10px; margin:8px 0; width:200px; max-width:90%;
+  border-radius:6px; border:1px solid #ccc; box-sizing:border-box;
+  transition: border-color 0.3s ease;
+  font-size:1rem;
+}
+input.error {
+  border-color: red !important;
+  outline: none;
+}
+button {
+  padding:10px 16px; border:none; border-radius:6px;
+  background-color:#0077cc; color:white; cursor:pointer;
+  font-size:1rem;
+  min-width:120px;
+  transition: background-color 0.3s ease;
+}
+button:disabled {
+  background-color: #a0c4e3;
+  cursor: not-allowed;
+}
+button:hover:not(:disabled) {
+  background-color:#005fa3;
+}
+#map {
+  height:500px; width:100%; border-radius:10px;
+  box-shadow:0 0 12px rgba(0,0,0,0.15);
+  background-color:lightgray;
+  margin-top:10px;
+}
+footer {
+  background-color:#222; color:#ccc; text-align:center;
+  padding:15px 20px; font-size:0.9em; width:100%;
+}
+.alert {
+  color:green;
+  font-weight:bold;
+  text-align:center;
+  margin-top:5px;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+  user-select:none;
+  min-height:1.2em;
+}
+.alert.error {
+  color:red;
+}
 @media (max-width:600px) {
-  header {flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;}
-  #header-right {width:100%; justify-content:space-between;}
-  h1 {font-size:1.5em;}
-  #form-coords {display:flex; flex-direction:column; align-items:center;}
-  input, button {width:90%; margin:6px 0;}
-  #map {height:300px;}
+  header {
+    flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;
+  }
+  #header-right {
+    width:100%; justify-content:space-between;
+  }
+  h1 {
+    font-size:1.5em;
+  }
+  #form-coords {
+    flex-direction: column;
+    align-items: center;
+  }
+  input, button {
+    width:90%;
+    margin: 6px 0;
+    min-width: unset;
+  }
+  #map {
+    height:300px;
+  }
 }
 </style>
 </head>
@@ -55,48 +132,45 @@ footer {background-color:#222; color:#ccc; text-align:center; padding:15px 20px;
   <div id="header-right">
     <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank">Sobre o projeto</a>
     {% if not session.get('logado') %}
-      <a href="/login">Área Privada</a>
+      <span id="abrir-login" style="cursor:pointer; color:#eee; text-decoration:underline;">Área Privada</span>
     {% else %}
-      <span onclick="confirmarLogout()">Logout</span>
+      <span onclick="confirmarLogout()" style="cursor:pointer;">Logout</span>
     {% endif %}
   </div>
 </header>
 <main>
+
+<div id="mensagem" class="alert" style="height:1.2em;">
   {% if mensagem %}
-    <div class="alert">{{ mensagem }}</div>
+    {{ mensagem }}
   {% endif %}
-  {% if page == 'login' %}
-    <h2 style="text-align:center">Área Privada</h2>
-    <form method="POST" style="text-align:center;">
-      <input type="password" name="senha" placeholder="Digite a senha" required />
-      <br/>
-      <button type="submit">Entrar</button>
-      <button type="button" onclick="window.location.href='/'">Voltar</button>
-    </form>
-  {% else %}
-    <div id="form-coords">
-      <input type="number" id="latitude" step="any" placeholder="Latitude"/>
-      <input type="number" id="longitude" step="any" placeholder="Longitude"/>
-      <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
-    </div>
-    <div id="map"></div>
-  {% endif %}
+</div>
+
+<div id="login-container" style="display:none; max-width:320px; margin:0 auto; text-align:center;">
+  <h2>Área Privada</h2>
+  <form id="form-login" method="POST" onsubmit="return false;">
+    <input type="password" id="senha" name="senha" placeholder="Digite a senha" required autocomplete="off"/>
+    <br/>
+    <button id="btn-login" type="submit">Entrar</button>
+    <button id="btn-voltar" type="button">Voltar</button>
+    <div id="erro-senha" class="alert error" style="height:1.2em; margin-top:8px;"></div>
+  </form>
+</div>
+
+<div id="form-coords">
+  <input type="number" id="latitude" step="any" placeholder="Latitude"/>
+  <input type="number" id="longitude" step="any" placeholder="Longitude"/>
+  <button id="btn-mostrar" disabled>Mostrar no Mapa</button>
+</div>
+<div id="map"></div>
 </main>
 <footer>Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.</footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-function confirmarLogout(){
-  if (confirm("Deseja realmente sair?")) {
-    window.location.href = "/logout";
-  }
-}
-
-// Inicializa mapa
 const map = L.map('map').setView([41.1578, -8.6291], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-// Cores por certificado
 const cores = {
   'A+':'008000','A':'00AA00','A-':'33BB33','B+':'66CC00','B':'99CC00','B-':'BBD600',
   'C+':'CCCC00','C':'FFFF00','C-':'FFDD00','D+':'FFB300','D':'FFA500','D-':'FF8800',
@@ -111,27 +185,60 @@ function criarIcone(c){
   return L.divIcon({html: svg, iconSize:[32,45], iconAnchor:[16,44], popupAnchor:[0,-40], className:''});
 }
 
-fetch('/todas_casas').then(r=>r.json()).then(casas => {
-  casas.forEach(c => {
-    const cor = cores[c.certificado]||cores[''];
-    const icon = criarIcone(cor);
-    const m = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
-    let texto = `<strong>${c.morada}</strong><br>
-                 ${c.descricao}<br>
-                 Latitude: ${c.latitude.toFixed(5)}<br>
-                 Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>`;
-    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
-    m.bindPopup(texto);
+function carregarCasas(){
+  fetch('/todas_casas').then(r=>r.json()).then(casas => {
+    casas.forEach(c => {
+      const cor = cores[c.certificado]||cores[''];
+      const icon = criarIcone(cor);
+      const m = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
+      let texto = `<strong>${c.morada}</strong><br>
+                   ${c.descricao}<br>
+                   Latitude: ${c.latitude.toFixed(5)}<br>
+                   Longitude: ${c.longitude.toFixed(5)}<br>
+                   Certificado: <strong>${c.certificado}</strong>`;
+      if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
+      m.bindPopup(texto);
+    });
   });
-});
+}
 
-function adicionarMarcador(){
+carregarCasas();
+
+function validarCampos(){
+  const lat = document.getElementById('latitude');
+  const lng = document.getElementById('longitude');
+  let valido = true;
+
+  // Limpar erros visuais
+  lat.classList.remove('error');
+  lng.classList.remove('error');
+
+  if(lat.value.trim() === '') {
+    lat.classList.add('error');
+    valido = false;
+  }
+  if(lng.value.trim() === '') {
+    lng.classList.add('error');
+    valido = false;
+  }
+
+  document.getElementById('btn-mostrar').disabled = !valido;
+  return valido;
+}
+
+document.getElementById('latitude').addEventListener('input', validarCampos);
+document.getElementById('longitude').addEventListener('input', validarCampos);
+
+document.getElementById('btn-mostrar').addEventListener('click', function(){
+  if(!validarCampos()) return; // Não permitir clique se inválido
+
   const lat = parseFloat(document.getElementById('latitude').value);
   const lng = parseFloat(document.getElementById('longitude').value);
-  if(isNaN(lat)||isNaN(lng)){alert('Valores inválidos');return;}
   fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(c=>{
-    if(!c.latitude){alert('Casa não encontrada'); return;}
+    if(!c.latitude){
+      alert('Casa não encontrada');
+      return;
+    }
     const cor = cores[c.certificado]||cores[''];
     const icon = criarIcone(cor);
     const mark = L.marker([c.latitude,c.longitude],{icon}).addTo(map);
@@ -140,78 +247,168 @@ function adicionarMarcador(){
                  Latitude: ${c.latitude.toFixed(5)}<br>
                  Longitude: ${c.longitude.toFixed(5)}<br>
                  Certificado: <strong>${c.certificado}</strong>`;
-    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
+    if(c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
     mark.bindPopup(texto).openPopup();
     map.setView([c.latitude,c.longitude],16);
   }).catch(_=>alert('Erro ao buscar casa'));
+});
+
+// -------------------- Login --------------------
+
+const loginContainer = document.getElementById('login-container');
+const abrirLogin = document.getElementById('abrir-login');
+const btnVoltar = document.getElementById('btn-voltar');
+const formLogin = document.getElementById('form-login');
+const senhaInput = document.getElementById('senha');
+const btnLogin = document.getElementById('btn-login');
+const erroSenha = document.getElementById('erro-senha');
+const mensagemDiv = document.getElementById('mensagem');
+
+if(abrirLogin){
+  abrirLogin.addEventListener('click', () => {
+    loginContainer.style.display = 'block';
+    abrirLogin.style.display = 'none';
+    erroSenha.textContent = '';
+    senhaInput.value = '';
+    senhaInput.focus();
+  });
 }
+
+btnVoltar.addEventListener('click', () => {
+  loginContainer.style.display = 'none';
+  abrirLogin.style.display = 'inline';
+  erroSenha.textContent = '';
+  senhaInput.value = '';
+});
+
+formLogin.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  erroSenha.textContent = '';
+  btnLogin.disabled = true;
+
+  const senha = senhaInput.value.trim();
+  if (!senha) {
+    erroSenha.textContent = 'Por favor, digite a senha.';
+    btnLogin.disabled = false;
+    return;
+  }
+
+  // Enviar via fetch para login
+  try {
+    const response = await fetch('/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({senha})
+    });
+    const text = await response.text();
+    if (text.includes('Senha incorreta')) {
+      erroSenha.textContent = 'Senha incorreta!';
+      btnLogin.disabled = false;
+      senhaInput.focus();
+    } else {
+      // Login OK - recarregar página para atualizar estado
+      location.reload();
+    }
+  } catch (err) {
+    erroSenha.textContent = 'Erro na conexão.';
+    btnLogin.disabled = false;
+  }
+});
+
+// -------------------- Logout --------------------
+
+function confirmarLogout(){
+  if(confirm('Deseja realmente sair?')){
+    fetch('/logout').then(() => {
+      mensagemDiv.textContent = 'Logout realizado com sucesso.';
+      mensagemDiv.classList.remove('error');
+      loginContainer.style.display = 'none';
+      if(abrirLogin) abrirLogin.style.display = 'inline';
+      // Ocultar a mensagem após 2s
+      setTimeout(() => { mensagemDiv.textContent = ''; }, 2000);
+      location.reload();
+    });
+  }
+}
+
+// Mostrar mensagem de sucesso login/logout por 2 segundos
+window.onload = () => {
+  if (mensagemDiv.textContent.trim() !== '') {
+    setTimeout(() => {
+      mensagemDiv.style.opacity = '0';
+      setTimeout(() => {
+        mensagemDiv.textContent = '';
+        mensagemDiv.style.opacity = '1';
+      }, 500);
+    }, 2000);
+  }
+};
 </script>
-</body></html>
-"""
+</body>
+</html>"""
 
 @app.route('/')
 def index():
-    return render_template_string(HTML, session=session, page='index', mensagem=session.pop('mensagem', ''))
+    mensagem = session.pop('mensagem', '')
+    return render_template_string(HTML, session=session, mensagem=mensagem)
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST'])
 def login():
-    mensagem = ''
-    if request.method == 'POST':
-        if request.form.get('senha') == 'Adming3':
-            session['logado'] = True
-            session['mensagem'] = 'Login efetuado com sucesso!'
-            return redirect('/')
-        else:
-            mensagem = 'Senha incorreta!'
-    return render_template_string(HTML, session=session, page='login', mensagem=mensagem)
+    senha = request.form.get('senha', '')
+    if senha == 'Adming3':
+        session['logado'] = True
+        session['mensagem'] = 'Login efetuado com sucesso!'
+        return 'Login efetuado com sucesso!'
+    else:
+        return 'Senha incorreta'
 
 @app.route('/logout')
 def logout():
-    session.clear()
+    session.pop('logado', None)
     session['mensagem'] = 'Logout realizado com sucesso.'
-    return redirect('/')
+    return ('', 204)
 
 @app.route('/todas_casas')
 def todas_casas():
-    if not folha_casa: return jsonify([])
-    regs = folha_casa.get_all_records()
+    if folha_casa is None:
+        return jsonify([])
+    dados = folha_casa.get_all_records()
     casas = []
-    for reg in regs:
+    for d in dados:
         try:
             casa = {
-                'latitude': float(reg.get('Latitude',0)),
-                'longitude': float(reg.get('Longitude',0)),
-                'morada': reg.get('Morada',''),
-                'descricao': reg.get('Descrição',''),
-                'certificado': reg.get('Certificado Energético','').strip()
+                'descricao': d.get('Descrição', ''),
+                'morada': d.get('Morada', ''),
+                'latitude': float(d.get('Latitude', 0)),
+                'longitude': float(d.get('Longitude', 0)),
+                'certificado': d.get('Certificado energético', '').strip().upper(),
+                'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
             }
-            if session.get('logado'):
-                casa['proprietario'] = reg.get('Proprietário', '')
             casas.append(casa)
-        except:
-            pass
+        except Exception:
+            continue
     return jsonify(casas)
 
 @app.route('/get_certificado')
 def get_certificado():
+    if folha_casa is None:
+        return jsonify({})
     lat = request.args.get('lat', type=float)
     lng = request.args.get('lng', type=float)
-    if not folha_casa or lat is None or lng is None: return jsonify({})
-    for reg in folha_casa.get_all_records():
+    dados = folha_casa.get_all_records()
+    for d in dados:
         try:
-            if abs(float(reg.get('Latitude',0))-lat)<1e-5 and abs(float(reg.get('Longitude',0))-lng)<1e-5:
-                casa = {
-                    'latitude': float(reg.get('Latitude',0)),
-                    'longitude': float(reg.get('Longitude',0)),
-                    'morada': reg.get('Morada',''),
-                    'descricao': reg.get('Descrição',''),
-                    'certificado': reg.get('Certificado Energético','').strip()
-                }
-                if session.get('logado'):
-                    casa['proprietario'] = reg.get('Proprietário', '')
-                return jsonify(casa)
-        except:
-            pass
+            if abs(float(d.get('Latitude', 0)) - lat) < 0.0001 and abs(float(d.get('Longitude', 0)) - lng) < 0.0001:
+                return jsonify({
+                    'descricao': d.get('Descrição', ''),
+                    'morada': d.get('Morada', ''),
+                    'latitude': float(d.get('Latitude', 0)),
+                    'longitude': float(d.get('Longitude', 0)),
+                    'certificado': d.get('Certificado energético', '').strip().upper(),
+                    'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
+                })
+        except Exception:
+            continue
     return jsonify({})
 
 if __name__ == '__main__':
