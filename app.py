@@ -23,94 +23,90 @@ HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gestão de Consumo</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        html, body { margin: 0; padding: 0; height: 100%; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex; flex-direction: column; min-height: 100vh;
-            background-color: #f4f7f9; color: #333;
-        }
-        header {
-            background-color: #0077cc; color: white;
-            padding: 1rem 2rem; display: flex;
-            justify-content: space-between; align-items: center;
-            flex-wrap: wrap;
-        }
-        header h1 { margin: 0; font-weight: 600; font-size: 1.8rem; }
-        header h1 a { color: white; text-decoration: none; }
-        #header-right {
-            display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
-        }
-        #header-right a, #header-right span {
-            font-size: 1rem; color: white; text-decoration: none; cursor: pointer;
-        }
-        #header-right a:hover { text-decoration: underline; }
-        main {
-            flex: 1; padding: 20px; max-width: 960px;
-            margin: 0 auto; width: 100%; display: flex; flex-direction: column;
-            gap: 20px;
-        }
-        #form-coords { text-align: center; }
-        input[type="number"], input[type="text"] {
-            padding: 10px; margin: 8px;
-            width: 200px; max-width: 90%;
-            border-radius: 6px; border: 1px solid #ccc;
-            box-sizing: border-box;
-        }
-        button {
-            padding: 10px 16px; border: none; border-radius: 6px;
-            background-color: #0077cc; color: white; cursor: pointer;
-        }
-        button:hover { background-color: #005fa3; }
-        #map {
-            height: 500px; width: 100%; border-radius: 10px;
-            box-shadow: 0 0 12px rgba(0,0,0,0.15);
-            background-color: lightgray;
-        }
-        footer {
-            background-color: #222; color: #ccc;
-            text-align: center; padding: 15px 20px;
-            font-size: 0.9em; width: 100%;
-        }
-        @media (max-width: 600px) {
-            header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 1rem; }
-            #header-right { width: 100%; justify-content: space-between; }
-            h1 { font-size: 1.5em; }
-            #form-coords {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            input, button { width: 90%; margin: 6px 0; }
-            #map { height: 300px; }
-        }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gestão de Consumo</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        display: flex; flex-direction: column; min-height: 100vh;
+        background-color: #f4f7f9; color: #333;
+    }
+    header {
+        background-color: #0077cc; color: white;
+        padding: 1rem 2rem; display: flex;
+        justify-content: space-between; align-items: center;
+        flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-weight: 600; font-size: 1.8rem; }
+    header h1 a { color: white; text-decoration: none; }
+    #header-right {
+        display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    }
+    #header-right a, #header-right span {
+        font-size: 1rem; color: white; text-decoration: none; cursor: pointer;
+    }
+    #header-right a:hover { text-decoration: underline; }
+    main {
+        flex: 1; padding: 20px; max-width: 960px;
+        margin: 0 auto; width: 100%; display: flex; flex-direction: column;
+        gap: 20px;
+    }
+    #form-coords { text-align: center; }
+    input[type="number"], input[type="text"] {
+        padding: 10px; margin: 8px;
+        width: 200px; max-width: 90%;
+        border-radius: 6px; border: 1px solid #ccc;
+        box-sizing: border-box;
+    }
+    button {
+        padding: 10px 16px; border: none; border-radius: 6px;
+        background-color: #0077cc; color: white; cursor: pointer;
+    }
+    button:hover { background-color: #005fa3; }
+    #map {
+        height: 500px; width: 100%; border-radius: 10px;
+        box-shadow: 0 0 12px rgba(0,0,0,0.15);
+        background-color: lightgray;
+    }
+    footer {
+        background-color: #222; color: #ccc;
+        text-align: center; padding: 15px 20px;
+        font-size: 0.9em; width: 100%;
+    }
+    @media (max-width: 600px) {
+        header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 1rem; }
+        #header-right { width: 100%; justify-content: space-between; }
+        h1 { font-size: 1.5em; }
+        #form-coords { display: flex; flex-direction: column; align-items: center; }
+        input, button { width: 90%; margin: 6px 0; }
+        #map { height: 300px; }
+    }
+</style>
 </head>
 <body>
-    <header>
-        <h1><a href="/">Gestão de Consumo</a></h1>
-        <div id="header-right">
-            <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank">Sobre o projeto</a>
-            <span>Entrar</span>
-        </div>
-    </header>
+<header>
+    <h1><a href="/">Gestão de Consumo</a></h1>
+    <div id="header-right">
+        <a href="https://github.com/WilkerJoseLopes/GestaoDeConsumo" target="_blank" title="Ver projeto no GitHub">Sobre o projeto</a>
+        <span title="Entrar (em breve)">Entrar</span>
+    </div>
+</header>
 
-    <main>
-        <div id="form-coords">
-            <input type="number" id="latitude" step="any" placeholder="Latitude" />
-            <input type="number" id="longitude" step="any" placeholder="Longitude" />
-            <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
-        </div>
-        <div id="map"></div>
-    </main>
+<main>
+    <div id="form-coords">
+        <input type="number" id="latitude" step="any" placeholder="Latitude" />
+        <input type="number" id="longitude" step="any" placeholder="Longitude" />
+        <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
+    </div>
+    <div id="map"></div>
+</main>
 
-    <footer>
-        Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.
-    </footer>
+<footer>
+    Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Nenhuma informação aqui representa dados reais.
+</footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -129,9 +125,10 @@ HTML_TEMPLATE = """
     };
 
     function criarIconeCor(corHex) {
-        const svg = \`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-            <path fill="#\${corHex}" stroke="black" stroke-width="2" d="M16,1 C24.2843,1 31,7.7157 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7157 7.7157,1 16,1 Z"/>
-        </svg>\`;
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+                <path fill="#${corHex}" stroke="black" stroke-width="2" d="M16,1 C24.2843,1 31,7.7157 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7157 7.7157,1 16,1 Z"/>
+            </svg>`;
         return L.divIcon({
             html: svg,
             iconSize: [32, 45],
@@ -148,31 +145,37 @@ HTML_TEMPLATE = """
             alert("Latitude e longitude inválidas.");
             return;
         }
-
-        const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
-        const data = await response.json();
-
-        const certificado = data.certificado || '';
-        const cor = coresCertificado[certificado] || '0000FF';
-        const icone = criarIconeCor(cor);
-
-        const marker = L.marker([lat, lng], { icon: icone }).addTo(map);
-        marker.bindPopup(\`<strong>\${data.morada}</strong><br>Certificado: <strong>\${certificado}</strong>\`).openPopup();
-
-        map.setView([lat, lng], 16);
-    }
-
-    async function carregarTodasAsCasas() {
-        const res = await fetch('/todas_casas');
-        const casas = await res.json();
-        casas.forEach(casa => {
-            const certificado = casa.certificado || '';
+        try {
+            const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
+            if (!response.ok) throw new Error("Erro ao buscar dados");
+            const data = await response.json();
+            const certificado = data.certificado || '';
             const cor = coresCertificado[certificado] || '0000FF';
             const icone = criarIconeCor(cor);
 
-            const marker = L.marker([casa.lat, casa.lng], { icon: icone }).addTo(map);
-            marker.bindPopup(\`<strong>\${casa.morada}</strong><br>Certificado: <strong>\${certificado}</strong>\`);
-        });
+            const marker = L.marker([lat, lng], { icon: icone }).addTo(map);
+            marker.bindPopup(`<strong>${data.morada || 'Morada desconhecida'}</strong><br>Certificado: <strong>${certificado}</strong>`).openPopup();
+            map.setView([lat, lng], 16);
+        } catch (err) {
+            alert("Erro ao buscar dados do certificado energético.");
+        }
+    }
+
+    async function carregarTodasAsCasas() {
+        try {
+            const res = await fetch('/todas_casas');
+            if (!res.ok) throw new Error("Erro ao carregar casas");
+            const casas = await res.json();
+            casas.forEach(casa => {
+                const certificado = casa.certificado || '';
+                const cor = coresCertificado[certificado] || '0000FF';
+                const icone = criarIconeCor(cor);
+                const marker = L.marker([casa.lat, casa.lng], { icon: icone }).addTo(map);
+                marker.bindPopup(`<strong>${casa.morada}</strong><br>Certificado: <strong>${certificado}</strong>`);
+            });
+        } catch (e) {
+            console.error("Falha ao carregar casas:", e);
+        }
     }
 
     carregarTodasAsCasas();
@@ -185,52 +188,43 @@ HTML_TEMPLATE = """
 def index():
     return render_template_string(HTML_TEMPLATE)
 
-@app.route("/get_certificado")
-def get_certificado():
-    lat = request.args.get('lat', type=float)
-    lng = request.args.get('lng', type=float)
-
-    if folha_casa is None or lat is None or lng is None:
-        return jsonify({})
-
-    try:
-        registros = folha_casa.get_all_records()
-        for reg in registros:
-            reg_lat = round(float(reg.get("Latitude", 0)), 5)
-            reg_lng = round(float(reg.get("Longitude", 0)), 5)
-            if round(lat, 5) == reg_lat and round(lng, 5) == reg_lng:
-                return jsonify({
-                    "morada": reg.get("Morada", ""),
-                    "descricao": reg.get("Descrição", ""),
-                    "proprietario": reg.get("Proprietário", ""),
-                    "certificado": reg.get("Certificado Energético", "")
-                })
-    except Exception as e:
-        print(f"Erro ao buscar certificado: {e}")
-    return jsonify({})
-
 @app.route("/todas_casas")
 def todas_casas():
-    if folha_casa is None:
+    if not folha_casa:
         return jsonify([])
+    dados = folha_casa.get_all_records()
+    casas = []
+    for linha in dados:
+        try:
+            lat = float(linha.get('Latitude', 0))
+            lng = float(linha.get('Longitude', 0))
+            morada = linha.get('Morada', 'Morada desconhecida')
+            certificado = linha.get('Certificado', '')
+            casas.append({'lat': lat, 'lng': lng, 'morada': morada, 'certificado': certificado})
+        except Exception:
+            continue
+    return jsonify(casas)
 
-    try:
-        registros = folha_casa.get_all_records()
-        casas = []
-        for reg in registros:
-            try:
-                casas.append({
-                    "lat": float(reg.get("Latitude", 0)),
-                    "lng": float(reg.get("Longitude", 0)),
-                    "morada": reg.get("Morada", ""),
-                    "certificado": reg.get("Certificado Energético", "")
+@app.route("/get_certificado")
+def get_certificado():
+    lat = request.args.get("lat", type=float)
+    lng = request.args.get("lng", type=float)
+    if not folha_casa or lat is None or lng is None:
+        return jsonify({'certificado': '', 'morada': 'Morada desconhecida'})
+    dados = folha_casa.get_all_records()
+    # Procura casa próxima (exemplo: mesma lat e lng exatos)
+    for linha in dados:
+        try:
+            lat_i = float(linha.get('Latitude', 0))
+            lng_i = float(linha.get('Longitude', 0))
+            if abs(lat_i - lat) < 0.0001 and abs(lng_i - lng) < 0.0001:
+                return jsonify({
+                    'certificado': linha.get('Certificado', ''),
+                    'morada': linha.get('Morada', 'Morada desconhecida')
                 })
-            except Exception:
-                continue
-        return jsonify(casas)
-    except Exception as e:
-        print(f"Erro ao buscar casas: {e}")
-        return jsonify([])
+        except Exception:
+            continue
+    return jsonify({'certificado': '', 'morada': 'Morada desconhecida'})
 
 if __name__ == "__main__":
     app.run(debug=True)
