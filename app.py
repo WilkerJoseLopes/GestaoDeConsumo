@@ -150,33 +150,33 @@ HTML_TEMPLATE = """
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     let marcadorUsuario = null;
+    const marcadoresCasas = [];
 
     // Cores em nomes compatíveis com os ícones PNG
     const coresCertificado = {
-    'A+': '008000',
-    'A': '00AA00',
-    'A-': '33BB33',
-    'B+': '66CC00',
-    'B': '99CC00',
-    'B-': 'BBD600',
-    'C+': 'CCCC00',
-    'C': 'FFFF00',
-    'C-': 'FFDD00',
-    'D+': 'FFB300',
-    'D': 'FFA500',
-    'D-': 'FF8800',
-    'E+': 'FF6666',
-    'E': 'FF0000',
-    'E-': 'CC0000',
-    'F+': 'A00000',
-    'F': '8B0000',
-    'F-': '660000',
-    'G+': '444444',
-    'G': '000000',
-    'G-': '222222',
-    '': '0000FF' // fallback azul
-};
-
+        'A+': '008000',
+        'A': '00AA00',
+        'A-': '33BB33',
+        'B+': '66CC00',
+        'B': '99CC00',
+        'B-': 'BBD600',
+        'C+': 'CCCC00',
+        'C': 'FFFF00',
+        'C-': 'FFDD00',
+        'D+': 'FFB300',
+        'D': 'FFA500',
+        'D-': 'FF8800',
+        'E+': 'FF6666',
+        'E': 'FF0000',
+        'E-': 'CC0000',
+        'F+': 'A00000',
+        'F': '8B0000',
+        'F-': '660000',
+        'G+': '444444',
+        'G': '000000',
+        'G-': '222222',
+        '': '0000FF' // fallback azul
+    };
 
     // Nova função para usar ícones confiáveis
     function criarIconeCor(corHex) {
@@ -185,92 +185,142 @@ HTML_TEMPLATE = """
                 <path fill="#${corHex}" stroke="black" stroke-width="2" d="M16,1 C24.2843,1 31,7.7157 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7157 7.7157,1 16,1 Z"/>
             </svg>
         `;
-    return L.divIcon({
-        html: svg,
-        iconSize: [32, 45],
-        iconAnchor: [16, 44],
-        popupAnchor: [0, -40],
-        className: '' // remove classes padrão do Leaflet
-    });
-}
+        return L.divIcon({
+            html: svg,
+            iconSize: [32, 45],
+            iconAnchor: [16, 44],
+            popupAnchor: [0, -40],
+            className: '' // remove classes padrão do Leaflet
+        });
+    }
 
+    // Função para carregar todas as casas da planilha
+    async function carregarTodasCasas() {
+        try {
+            const response = await fetch('/get_todas_casas');
+            if (!response.ok) {
+                console.error("Erro ao buscar dados das casas");
+                return;
+            }
+            const casas = await response.json();
+            
+            // Limpar marcadores existentes
+            marcadoresCasas.forEach(marker => map.removeLayer(marker));
+            marcadoresCasas.length = 0;
+            
+            // Adicionar novos marcadores
+            casas.forEach(casa => {
+                if (casa.latitude && casa.longitude) {
+                    const lat = parseFloat(casa.latitude);
+                    const lng = parseFloat(casa.longitude);
+                    const certificado = casa.certificado || '';
+                    const corHex = coresCertificado[certificado] || '0000FF';
+                    const icone = criarIconeCor(corHex);
+                    
+                    const marcador = L.marker([lat, lng], {icon: icone}).addTo(map);
+                    
+                    marcador.bindPopup(
+                        `<div id="popup-content">
+                            <strong>${casa.morada || 'Morada não disponível'}</strong><br>
+                            <em>${casa.descricao || 'Descrição não disponível'}</em><br><br>
+                            Latitude: ${lat}<br>
+                            Longitude: ${lng}<br>
+                            Certificado Energético: <strong>${certificado}</strong><br><br>
+                            <button onclick="mostrarInputCodigo('${casa.proprietario || 'Desconhecido'}', this.parentElement)">🔑 Aceder à Casa</button>
+                            <div class="input-codigo-container" style="margin-top: 10px; display: none;">
+                                <input type="text" class="codigo-casa" placeholder="Introduza o código" />
+                                <button onclick="validarCodigo(this.parentElement, '${casa.proprietario || 'Desconhecido'}')">Confirmar</button>
+                            </div>
+                            <div class="info-proprietario" style="margin-top: 10px; font-weight: bold;"></div>
+                        </div>`
+                    );
+                    
+                    marcadoresCasas.push(marcador);
+                }
+            });
+        } catch (error) {
+            console.error("Erro ao carregar casas:", error);
+        }
+    }
 
     async function adicionarMarcador() {
-    const lat = parseFloat(document.getElementById('latitude').value);
-    const lng = parseFloat(document.getElementById('longitude').value);
+        const lat = parseFloat(document.getElementById('latitude').value);
+        const lng = parseFloat(document.getElementById('longitude').value);
 
-    if (isNaN(lat) || isNaN(lng)) {
-        alert("Por favor, insira valores válidos para latitude e longitude.");
-        return;
-    }
-
-    try {
-        const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
-        if (!response.ok) {
-            alert("Erro ao buscar dados do certificado energético.");
+        if (isNaN(lat) || isNaN(lng)) {
+            alert("Por favor, insira valores válidos para latitude e longitude.");
             return;
         }
-        const data = await response.json();
 
-        const certificado = data.certificado || '';
-        const morada = data.morada || 'Morada não disponível';
-        const descricao = data.descricao || 'Descrição não disponível';
-        const proprietario = data.proprietario || 'Desconhecido';
-
-        const corNome = coresCertificado[certificado] || 'blue';
-
-        if (marcadorUsuario) {
-            map.removeLayer(marcadorUsuario);
-        }
-
-        const icone = criarIconeCor(corNome);
-
-        marcadorUsuario = L.marker([lat, lng], {icon: icone}).addTo(map);
-
-        marcadorUsuario.bindPopup(
-            `<div id="popup-content">
-                <strong>${morada}</strong><br>
-                <em>${descricao}</em><br><br>
-                Latitude: ${lat}<br>
-                Longitude: ${lng}<br>
-                Certificado Energético: <strong>${certificado}</strong><br><br>
-                <button onclick="mostrarInputCodigo()">🔑 Aceder à Casa</button>
-                <div id="input-codigo-container" style="margin-top: 10px; display: none;">
-                <input type="text" id="codigo-casa" placeholder="Introduza o código" />
-                <button onclick="validarCodigo()">Confirmar</button>
-                </div>
-                <div id="info-proprietario" style="margin-top: 10px; font-weight: bold;"></div>
-            </div>`
-        ).openPopup();
-
-        map.setView([lat, lng], 16);
-
-        // Função para validar código e mostrar proprietário
-        window.validarCodigo = function() {
-            const codigoInserido = document.getElementById('codigo-casa').value.trim();
-            const infoProp = document.getElementById('info-proprietario');
-            if (codigoInserido === 'ademin007') {
-                infoProp.textContent = `Proprietário: ${proprietario}`;
-            } else {
-                infoProp.textContent = 'Código incorreto.';
+        try {
+            const response = await fetch(`/get_certificado?lat=${lat}&lng=${lng}`);
+            if (!response.ok) {
+                alert("Erro ao buscar dados do certificado energético.");
+                return;
             }
-        };
+            const data = await response.json();
 
-    } catch (error) {
-        alert("Erro na comunicação com o servidor: " + error);
+            const certificado = data.certificado || '';
+            const morada = data.morada || 'Morada não disponível';
+            const descricao = data.descricao || 'Descrição não disponível';
+            const proprietario = data.proprietario || 'Desconhecido';
+
+            const corHex = coresCertificado[certificado] || '0000FF';
+
+            if (marcadorUsuario) {
+                map.removeLayer(marcadorUsuario);
+            }
+
+            const icone = criarIconeCor(corHex);
+
+            marcadorUsuario = L.marker([lat, lng], {icon: icone}).addTo(map);
+
+            marcadorUsuario.bindPopup(
+                `<div id="popup-content">
+                    <strong>${morada}</strong><br>
+                    <em>${descricao}</em><br><br>
+                    Latitude: ${lat}<br>
+                    Longitude: ${lng}<br>
+                    Certificado Energético: <strong>${certificado}</strong><br><br>
+                    <button onclick="mostrarInputCodigo('${proprietario}', this.parentElement)">🔑 Aceder à Casa</button>
+                    <div class="input-codigo-container" style="margin-top: 10px; display: none;">
+                        <input type="text" class="codigo-casa" placeholder="Introduza o código" />
+                        <button onclick="validarCodigo(this.parentElement, '${proprietario}')">Confirmar</button>
+                    </div>
+                    <div class="info-proprietario" style="margin-top: 10px; font-weight: bold;"></div>
+                </div>`
+            ).openPopup();
+
+            map.setView([lat, lng], 16);
+
+        } catch (error) {
+            alert("Erro na comunicação com o servidor: " + error);
+        }
     }
-}
 
-    function mostrarInputCodigo() {
-        const container = document.getElementById("input-codigo-container");
+    function mostrarInputCodigo(proprietario, parentElement) {
+        const container = parentElement.querySelector(".input-codigo-container");
         if (container) {
             container.style.display = "block";
-            const codigoInput = document.getElementById("codigo-casa");
+            const codigoInput = container.querySelector(".codigo-casa");
             if (codigoInput) {
                 codigoInput.focus();
             }
         }
     }
+
+    function validarCodigo(parentElement, proprietario) {
+        const codigoInserido = parentElement.querySelector(".codigo-casa").value.trim();
+        const infoProp = parentElement.querySelector(".info-proprietario");
+        if (codigoInserido === 'ademin007') {
+            infoProp.textContent = `Proprietário: ${proprietario}`;
+        } else {
+            infoProp.textContent = 'Código incorreto.';
+        }
+    }
+
+    // Carregar todas as casas quando a página é carregada
+    document.addEventListener('DOMContentLoaded', carregarTodasCasas);
 </script>
 </body>
 </html>
@@ -299,10 +349,6 @@ def get_certificado():
     try:
         registros = folha_casa.get_all_records()
         
-        # Mostrar as colunas da planilha no log para identificar nomes corretos
-        if registros:
-            print("Colunas disponíveis na planilha:", registros[0].keys())
-
         lat_round = round(lat, 5)
         lng_round = round(lng, 5)
 
@@ -315,7 +361,6 @@ def get_certificado():
                         'certificado': reg.get('Certificado Energético', '').strip(),
                         'morada': reg.get('Morada', '').strip(),
                         'descricao': reg.get('Descrição', '').strip(),
-                        # Ajuste aqui o nome da coluna do proprietário depois do teste!
                         'proprietario': reg.get('Proprietário', '').strip()
                     })
             except Exception:
@@ -325,6 +370,35 @@ def get_certificado():
 
     return jsonify({'certificado': '', 'morada': '', 'descricao': '', 'proprietario': ''})
 
+@app.route('/get_todas_casas')
+def get_todas_casas():
+    if folha_casa is None:
+        return jsonify([])
+
+    try:
+        registros = folha_casa.get_all_records()
+        casas = []
+        
+        for reg in registros:
+            try:
+                casa = {
+                    'latitude': reg.get('Latitude', '').strip(),
+                    'longitude': reg.get('Longitude', '').strip(),
+                    'certificado': reg.get('Certificado Energético', '').strip(),
+                    'morada': reg.get('Morada', '').strip(),
+                    'descricao': reg.get('Descrição', '').strip(),
+                    'proprietario': reg.get('Proprietário', '').strip()
+                }
+                if casa['latitude'] and casa['longitude']:
+                    casas.append(casa)
+            except Exception as e:
+                print(f"Erro ao processar registro: {e}")
+                continue
+                
+        return jsonify(casas)
+    except Exception as e:
+        print(f"Erro ao buscar todas as casas: {e}")
+        return jsonify([])
 
 if __name__ == '__main__':
     app.run(debug=True)
