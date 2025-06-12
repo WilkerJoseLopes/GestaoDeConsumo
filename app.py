@@ -136,12 +136,12 @@ footer {
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+// Funções login/logout
 function confirmarLogout(){
   if (confirm("Deseja realmente sair?")) {
     window.location.href = "/logout";
   }
 }
-
 function abrirLogin(){
   document.getElementById("loginModal").style.display = "flex";
 }
@@ -167,10 +167,11 @@ function enviarSenha(){
   });
 }
 
-// Mapa
+// Inicializa mapa Leaflet
 const map = L.map('map').setView([41.1578, -8.6291], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
+// Cores para certificados
 const cores = {
   'A+':'008000','A':'00AA00','A-':'33BB33','B+':'66CC00','B':'99CC00','B-':'BBD600',
   'C+':'CCCC00','C':'FFFF00','C-':'FFDD00','D+':'FFB300','D':'FFA500','D-':'FF8800',
@@ -179,13 +180,13 @@ const cores = {
 };
 
 function criarIcone(c){
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-      <path fill="#${c}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
-    </svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+    <path fill="#${c}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
+  </svg>`;
   return L.divIcon({html: svg, iconSize:[32,45], iconAnchor:[16,44], popupAnchor:[0,-40], className:''});
 }
 
+// Carrega e adiciona todos os marcadores do servidor
 fetch('/todas_casas').then(r=>r.json()).then(casas => {
   casas.forEach(c => {
     const cor = cores[c.certificado]||cores[''];
@@ -200,23 +201,32 @@ fetch('/todas_casas').then(r=>r.json()).then(casas => {
   });
 });
 
+// Função para adicionar marcador via input de coordenadas
 function adicionarMarcador(){
   const lat = parseFloat(document.getElementById('latitude').value);
   const lng = parseFloat(document.getElementById('longitude').value);
-  if(isNaN(lat)||isNaN(lng)){alert('Valores inválidos');return;}
+  if(isNaN(lat) || isNaN(lng)){
+    alert('Valores inválidos');
+    return;
+  }
   fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(c=>{
-    if(!c.latitude){alert('Casa não encontrada'); return;}
+    if(!c.latitude){
+      alert('Casa não encontrada');
+      return;
+    }
     const cor = cores[c.certificado]||cores[''];
     const icon = criarIcone(cor);
-    const mark = L.marker([c.latitude,c.longitude],{icon}).addTo(map);
+    const mark = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
     let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
                  Latitude: ${c.latitude.toFixed(5)}<br>
                  Longitude: ${c.longitude.toFixed(5)}<br>
                  Certificado: <strong>${c.certificado}</strong>`;
     if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
     mark.bindPopup(texto).openPopup();
-    map.setView([c.latitude,c.longitude],16);
-  }).catch(_=>alert('Erro ao buscar casa'));
+    map.setView([c.latitude, c.longitude], 16);
+  }).catch(_=>{
+    alert('Erro ao buscar casa');
+  });
 }
 </script>
 </body>
@@ -243,23 +253,24 @@ def logout():
 
 @app.route('/todas_casas')
 def todas_casas():
-    if not folha_casa: 
+    if not folha_casa:
         return jsonify([])
     regs = folha_casa.get_all_records()
     casas = []
     for reg in regs:
         try:
             casa = {
-                'latitude': float(reg.get('Latitude',0)),
-                'longitude': float(reg.get('Longitude',0)),
-                'descricao': reg.get('Descrição',''),
-                'morada': reg.get('Morada',''),
-                'certificado': reg.get('Certificado Energético',''),
-                'proprietario': reg.get('Proprietário','') if session.get('logado') else ''
+                'latitude': float(reg.get('Latitude', 0)),
+                'longitude': float(reg.get('Longitude', 0)),
+                'morada': reg.get('Morada', ''),
+                'descricao': reg.get('Descrição', ''),
+                'certificado': reg.get('Certificado Energético', '').strip()
             }
+            if session.get('logado'):
+                casa['proprietario'] = reg.get('Proprietário', '')
             casas.append(casa)
-        except Exception:
-            continue
+        except:
+            pass
     return jsonify(casas)
 
 @app.route('/get_certificado')
@@ -268,22 +279,20 @@ def get_certificado():
     lng = request.args.get('lng', type=float)
     if not folha_casa or lat is None or lng is None:
         return jsonify({})
-    regs = folha_casa.get_all_records()
-    for reg in regs:
+    for reg in folha_casa.get_all_records():
         try:
-            rlat = float(reg.get('Latitude',0))
-            rlng = float(reg.get('Longitude',0))
-            if abs(rlat - lat) < 0.0001 and abs(rlng - lng) < 0.0001:
+            if abs(float(reg.get('Latitude', 0)) - lat) < 0.00001 and abs(float(reg.get('Longitude', 0)) - lng) < 0.00001:
                 casa = {
-                    'latitude': rlat,
-                    'longitude': rlng,
-                    'descricao': reg.get('Descrição',''),
-                    'morada': reg.get('Morada',''),
-                    'certificado': reg.get('Certificado Energético',''),
-                    'proprietario': reg.get('Proprietário','') if session.get('logado') else ''
+                    'latitude': float(reg.get('Latitude', 0)),
+                    'longitude': float(reg.get('Longitude', 0)),
+                    'morada': reg.get('Morada', ''),
+                    'descricao': reg.get('Descrição', ''),
+                    'certificado': reg.get('Certificado Energético', '').strip()
                 }
+                if session.get('logado'):
+                    casa['proprietario'] = reg.get('Proprietário', '')
                 return jsonify(casa)
-        except Exception:
+        except:
             continue
     return jsonify({})
 
