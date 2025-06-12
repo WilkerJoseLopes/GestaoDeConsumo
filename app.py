@@ -178,31 +178,24 @@ const cores = {
   'G+':'444444','G':'000000','G-':'222222','':'0000FF'
 };
 
-function criarIcone(corHex){
+function criarIcone(c){
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-      <path fill="#${corHex}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
+      <path fill="#${c}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
     </svg>`;
-  return L.divIcon({
-    html: svg,
-    iconSize: [32, 45],
-    iconAnchor: [16, 44],
-    popupAnchor: [0, -40],
-    className: ''
-  });
+  return L.divIcon({html: svg, iconSize:[32,45], iconAnchor:[16,44], popupAnchor:[0,-40], className:''});
 }
 
 fetch('/todas_casas').then(r=>r.json()).then(casas => {
   casas.forEach(c => {
-    const cor = cores[c.certificado] || cores[''];
+    const cor = cores[c.certificado]||cores[''];
     const icon = criarIcone(cor);
     const m = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
-    let texto = "<strong>" + c.morada + "</strong><br>" +
-                c.descricao + "<br>" +
-                "Latitude: " + c.latitude.toFixed(5) + "<br>" +
-                "Longitude: " + c.longitude.toFixed(5) + "<br>" +
-                "Certificado: <strong>" + c.certificado + "</strong>";
-    if (c.proprietario) texto += "<br><em>Proprietário: " + c.proprietario + "</em>";
+    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
+                 Latitude: ${c.latitude.toFixed(5)}<br>
+                 Longitude: ${c.longitude.toFixed(5)}<br>
+                 Certificado: <strong>${c.certificado}</strong>`;
+    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
     m.bindPopup(texto);
   });
 });
@@ -210,106 +203,89 @@ fetch('/todas_casas').then(r=>r.json()).then(casas => {
 function adicionarMarcador(){
   const lat = parseFloat(document.getElementById('latitude').value);
   const lng = parseFloat(document.getElementById('longitude').value);
-  if(isNaN(lat) || isNaN(lng)){
-    alert('Valores inválidos');
-    return;
-  }
+  if(isNaN(lat)||isNaN(lng)){alert('Valores inválidos');return;}
   fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(c=>{
-    if(!c.latitude){
-      alert('Casa não encontrada');
-      return;
-    }
-    const cor = cores[c.certificado] || cores[''];
+    if(!c.latitude){alert('Casa não encontrada'); return;}
+    const cor = cores[c.certificado]||cores[''];
     const icon = criarIcone(cor);
     const mark = L.marker([c.latitude,c.longitude],{icon}).addTo(map);
-    let texto = "<strong>" + c.morada + "</strong><br>" +
-                c.descricao + "<br>" +
-                "Latitude: " + c.latitude.toFixed(5) + "<br>" +
-                "Longitude: " + c.longitude.toFixed(5) + "<br>" +
-                "Certificado: <strong>" + c.certificado + "</strong>";
-    if (c.proprietario) texto += "<br><em>Proprietário: " + c.proprietario + "</em>";
+    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
+                 Latitude: ${c.latitude.toFixed(5)}<br>
+                 Longitude: ${c.longitude.toFixed(5)}<br>
+                 Certificado: <strong>${c.certificado}</strong>`;
+    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
     mark.bindPopup(texto).openPopup();
     map.setView([c.latitude,c.longitude],16);
-  }).catch(_=>{
-    alert('Erro ao buscar casa');
-  });
+  }).catch(_=>alert('Erro ao buscar casa'));
 }
 </script>
 </body>
 </html>
 """
 
-def buscar_casas():
-    # Retorna lista de dicts com dados da planilha "Dados Casa"
-    casas = []
-    if folha_casa:
-        try:
-            linhas = folha_casa.get_all_records()
-            for linha in linhas:
-                # Converte tipos, protege campos
-                try:
-                    lat = float(linha.get("Latitude",0))
-                    lng = float(linha.get("Longitude",0))
-                    casas.append({
-                        "descricao": linha.get("Descrição",""),
-                        "morada": linha.get("Morada",""),
-                        "latitude": lat,
-                        "longitude": lng,
-                        "certificado": linha.get("Certificado Energético","").strip(),
-                        "proprietario": linha.get("Proprietário","").strip()
-                    })
-                except:
-                    continue
-        except Exception as e:
-            print("Erro ao ler casas:", e)
-    return casas
-
-@app.route("/")
+@app.route('/')
 def index():
-    mensagem = None
-    if not folha_casa:
-        mensagem = "Erro ao carregar dados do Google Sheets."
-    return render_template_string(HTML, session=session, mensagem=mensagem)
+    return render_template_string(HTML, session=session, mensagem=session.pop('mensagem', ''))
 
-@app.route("/todas_casas")
-def todas_casas():
-    casas = buscar_casas()
-    # Se usuário não logado, remove proprietário para não expor
-    if not session.get("logado"):
-        for c in casas:
-            c["proprietario"] = ""
-    return jsonify(casas)
-
-@app.route("/get_certificado")
-def get_certificado():
-    lat = request.args.get("lat", type=float)
-    lng = request.args.get("lng", type=float)
-    casas = buscar_casas()
-    for c in casas:
-        # tolerância pequena para "encontrar" a casa
-        if abs(c["latitude"] - lat) < 0.0001 and abs(c["longitude"] - lng) < 0.0001:
-            # Remove proprietário se não logado
-            if not session.get("logado"):
-                c["proprietario"] = ""
-            return jsonify(c)
-    return jsonify({})  # não encontrado
-
-@app.route("/verifica_senha", methods=["POST"])
+@app.route('/verifica_senha', methods=['POST'])
 def verifica_senha():
-    dados = request.json
-    senha = dados.get("senha","")
-    # Senha fixa para demonstração
-    if senha == "12345":
-        session["logado"] = True
-        session["usuario"] = "João Silva"
-        return jsonify({"ok": True})
-    else:
-        return jsonify({"ok": False})
+    senha = request.json.get('senha')
+    if senha == 'Adming3':
+        session['logado'] = True
+        return jsonify({'ok': True})
+    return jsonify({'ok': False})
 
-@app.route("/logout")
+@app.route('/logout')
 def logout():
     session.clear()
-    return redirect("/")
+    session['mensagem'] = 'Logout realizado com sucesso.'
+    return redirect('/')
 
-if __name__ == "__main__":
+@app.route('/todas_casas')
+def todas_casas():
+    if not folha_casa: 
+        return jsonify([])
+    regs = folha_casa.get_all_records()
+    casas = []
+    for reg in regs:
+        try:
+            casa = {
+                'latitude': float(reg.get('Latitude',0)),
+                'longitude': float(reg.get('Longitude',0)),
+                'descricao': reg.get('Descrição',''),
+                'morada': reg.get('Morada',''),
+                'certificado': reg.get('Certificado Energético',''),
+                'proprietario': reg.get('Proprietário','') if session.get('logado') else ''
+            }
+            casas.append(casa)
+        except Exception:
+            continue
+    return jsonify(casas)
+
+@app.route('/get_certificado')
+def get_certificado():
+    lat = request.args.get('lat', type=float)
+    lng = request.args.get('lng', type=float)
+    if not folha_casa or lat is None or lng is None:
+        return jsonify({})
+    regs = folha_casa.get_all_records()
+    for reg in regs:
+        try:
+            rlat = float(reg.get('Latitude',0))
+            rlng = float(reg.get('Longitude',0))
+            if abs(rlat - lat) < 0.0001 and abs(rlng - lng) < 0.0001:
+                casa = {
+                    'latitude': rlat,
+                    'longitude': rlng,
+                    'descricao': reg.get('Descrição',''),
+                    'morada': reg.get('Morada',''),
+                    'certificado': reg.get('Certificado Energético',''),
+                    'proprietario': reg.get('Proprietário','') if session.get('logado') else ''
+                }
+                return jsonify(casa)
+        except Exception:
+            continue
+    return jsonify({})
+
+if __name__ == '__main__':
     app.run(debug=True)
