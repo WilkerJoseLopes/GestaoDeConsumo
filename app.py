@@ -229,65 +229,64 @@ def verifica_senha():
     senha = request.json.get('senha')
     if senha == 'Adming3':
         session['logado'] = True
-        return jsonify(ok=True)
-    return jsonify(ok=False)
+        return jsonify({'ok': True})
+    return jsonify({'ok': False})
 
 @app.route('/logout')
 def logout():
-    session.clear()
-    session['mensagem'] = 'Logout realizado com sucesso.'
+    session.pop('logado', None)
+    session['mensagem'] = "Logout efetuado com sucesso."
     return redirect('/')
 
 @app.route('/todas_casas')
 def todas_casas():
+    if folha_casa is None:
+        return jsonify([])
+
+    dados = folha_casa.get_all_records()
     casas = []
-    if folha_casa:
+    for linha in dados:
         try:
-            dados = folha_casa.get_all_records()
-            for d in dados:
-                try:
-                    lat = float(d.get('Latitude', 0))
-                    lng = float(d.get('Longitude', 0))
-                    casas.append({
-                        'latitude': lat,
-                        'longitude': lng,
-                        'descricao': d.get('Descrição', ''),
-                        'morada': d.get('Morada', ''),
-                        'certificado': d.get('Certificado energético', ''),
-                        'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
-                    })
-                except Exception:
-                    continue
-        except Exception as e:
-            print("Erro leitura dados casas:", e)
+            lat = float(linha.get('Latitude') or 0)
+            lng = float(linha.get('Longitude') or 0)
+            casa = {
+                'id': linha.get('ID'),
+                'descricao': linha.get('Descrição'),
+                'morada': linha.get('Morada'),
+                'latitude': lat,
+                'longitude': lng,
+                'certificado': linha.get('Certificado energético', '').strip(),
+                'proprietario': linha.get('Proprietário') if session.get('logado') else None
+            }
+            casas.append(casa)
+        except:
+            continue
     return jsonify(casas)
 
 @app.route('/get_certificado')
 def get_certificado():
     lat = request.args.get('lat', type=float)
     lng = request.args.get('lng', type=float)
-    if not (lat and lng and folha_casa):
+    if folha_casa is None or lat is None or lng is None:
         return jsonify({})
-    try:
-        dados = folha_casa.get_all_records()
-        for d in dados:
-            try:
-                lat_c = float(d.get('Latitude', 0))
-                lng_c = float(d.get('Longitude', 0))
-                if abs(lat - lat_c) < 0.0001 and abs(lng - lng_c) < 0.0001:
-                    return jsonify({
-                        'latitude': lat_c,
-                        'longitude': lng_c,
-                        'descricao': d.get('Descrição', ''),
-                        'morada': d.get('Morada', ''),
-                        'certificado': d.get('Certificado energético', ''),
-                        'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
-                    })
-            except Exception:
-                continue
-    except Exception as e:
-        print("Erro get_certificado:", e)
+    dados = folha_casa.get_all_records()
+    for linha in dados:
+        try:
+            lat2 = float(linha.get('Latitude') or 0)
+            lng2 = float(linha.get('Longitude') or 0)
+            if abs(lat - lat2) < 1e-5 and abs(lng - lng2) < 1e-5:
+                return jsonify({
+                    'id': linha.get('ID'),
+                    'descricao': linha.get('Descrição'),
+                    'morada': linha.get('Morada'),
+                    'latitude': lat2,
+                    'longitude': lng2,
+                    'certificado': linha.get('Certificado energético', '').strip(),
+                    'proprietario': linha.get('Proprietário') if session.get('logado') else None
+                })
+        except:
+            continue
     return jsonify({})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
