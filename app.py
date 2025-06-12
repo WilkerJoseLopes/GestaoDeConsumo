@@ -1,183 +1,229 @@
-import os
-import json
+from flask import Flask, render_template_string, request, session, redirect, url_for
 import gspread
-from flask import Flask, render_template_string, request, redirect, url_for, session, flash
 from google.oauth2.service_account import Credentials
+import json
 
 app = Flask(__name__)
-app.secret_key = 'segredo'
+app.secret_key = 'sua_chave_secreta'
 
-# Acesso ao Google Sheets
-creds = Credentials.from_service_account_file('credenciais.json', scopes=["https://www.googleapis.com/auth/spreadsheets"])
+# Autenticação com Google Sheets
+scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+creds = Credentials.from_service_account_file('credenciais.json', scopes=scope)
 client = gspread.authorize(creds)
-sheet = client.open("Casas_Consumo")
 
-casas = sheet.worksheet("Casas").get_all_records()
-consumos = sheet.worksheet("Dados Consumos").get_all_records()
+sheet_casas = client.open("Dados Casa").worksheet("Casas")
+sheet_consumos = client.open("Dados Consumos").worksheet("Consumos")
 
-HTML_BASE = """
+def get_casas():
+    dados = sheet_casas.get_all_records()
+    return dados
+
+def get_consumos_por_id(id_casa):
+    todos = sheet_consumos.get_all_records()
+    return [c for c in todos if str(c["ID Casa"]) == str(id_casa)]
+
+@app.route('/')
+def index():
+    casas = get_casas()
+    casas_json = json.dumps(casas)
+    logged_in = 'user' in session
+    nome_proprietario = session['user']['Proprietário'] if logged_in else None
+    consumos = get_consumos_por_id(session['user']['ID']) if logged_in else []
+
+    return render_template_string('''
 <!DOCTYPE html>
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
     <title>Gestão de Consumo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        body {{
+        body {
+            margin: 0;
             font-family: 'Segoe UI', sans-serif;
-            background: #0b0c10;
-            color: #c5c6c7;
-            margin: 0;
-        }}
-        header {{
-            background: #1f2833;
-            color: #66fcf1;
-            padding: 1em;
+            background-color: #111;
+            color: #eee;
+        }
+        header {
+            background: linear-gradient(90deg, #0f0f0f, #1a1a1a);
+            padding: 1rem;
             text-align: center;
-        }}
-        header h1 {{
-            margin: 0;
-            font-size: 2em;
-        }}
-        a {{
-            color: #66fcf1;
+            color: #0ff;
+            font-size: 2rem;
+            font-weight: bold;
+            box-shadow: 0 2px 10px #000;
+        }
+        header a {
             text-decoration: none;
-        }}
-        .content {{
-            padding: 2em;
-        }}
-        #map {{
-            height: 500px;
-            border: 3px solid #45a29e;
-            border-radius: 12px;
-        }}
-        .login-section, .private-section {{
-            margin-top: 2em;
-            background: #1f2833;
-            padding: 2em;
-            border-radius: 12px;
-            box-shadow: 0 0 20px rgba(102, 252, 241, 0.4);
-        }}
-        input, button {{
-            padding: 0.5em;
-            font-size: 1em;
-            border-radius: 8px;
-            border: none;
-            margin-top: 0.5em;
-        }}
-        .btn {{
-            background-color: #66fcf1;
-            color: #0b0c10;
-            cursor: pointer;
-        }}
-        .btn:hover {{
-            background-color: #45a29e;
-        }}
-        table {{
+            color: #0ff;
+        }
+        #map {
+            height: 60vh;
             width: 100%;
+        }
+        .container {
+            padding: 2rem;
+        }
+        .login-form, .consumos {
+            background-color: #1e1e1e;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+            margin-top: 2rem;
+        }
+        .consumos h2 {
+            color: #0ff;
+            text-shadow: 0 0 5px #0ff;
+            font-size: 1.8rem;
+        }
+        table {
+            width: 100%;
+            margin-top: 1rem;
             border-collapse: collapse;
-            margin-top: 1em;
-        }}
-        th, td {{
-            border: 1px solid #45a29e;
-            padding: 0.75em;
-            text-align: left;
-        }}
-        th {{
-            background-color: #0b0c10;
-            color: #66fcf1;
-        }}
-        .nasa-box {{
-            background: linear-gradient(145deg, #0b0c10, #1f2833);
-            box-shadow: 0 0 20px #66fcf1;
-            padding: 2em;
-            border-radius: 15px;
-        }}
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 0.6rem;
+            text-align: center;
+        }
+        th {
+            background-color: #0ff;
+            color: #000;
+        }
+        td {
+            background-color: #222;
+        }
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            background-color: #0ff;
+            color: #000;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .btn:hover {
+            background-color: #00cccc;
+        }
+        .logout-link {
+            color: #ff6666;
+            font-weight: bold;
+        }
+        .warning {
+            color: #f88;
+            margin-top: 0.5rem;
+        }
     </style>
 </head>
 <body>
-    <header>
-        <h1><a href="{{ url_for('index') }}">Gestão de Consumo</a></h1>
-    </header>
-    <div class="content">
-        {content}
+    <header><a href="{{ url_for('index') }}">Gestão de Consumo</a></header>
+    <div id="map"></div>
+    <div class="container">
+        {% if not logged_in %}
+            <div class="login-form">
+                <h2>Acesso à Área Privada</h2>
+                <form method="post" action="{{ url_for('login') }}">
+                    <label>ID da Casa:</label><br>
+                    <input type="text" name="id"><br><br>
+                    <label>Senha:</label><br>
+                    <input type="password" name="senha"><br><br>
+                    <button type="submit" class="btn">Entrar</button>
+                </form>
+                {% if session.get('erro') %}
+                    <div class="warning">ID ou senha incorretos.</div>
+                    {% set _ = session.pop('erro') %}
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="consumos">
+                <h2>Área Privada – Bem-vindo, {{ nome_proprietario }}</h2>
+                <table>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Período</th>
+                        <th>Valor</th>
+                        <th>Unidade</th>
+                        <th>Custo (€)</th>
+                    </tr>
+                    {% for c in consumos %}
+                        <tr>
+                            <td>{{ c['Tipo Consumo'] }}</td>
+                            <td>{{ c['Período'] }}</td>
+                            <td>{{ c['Valor'] }}</td>
+                            <td>{{ c['Unidade'] }}</td>
+                            <td>{{ c['Custo (€)'] }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+                <br>
+                <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
+            </div>
+        {% endif %}
     </div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        const casas = {casas_json};
-        const mapa = L.map('map').setView([38.72, -9.14], 10);
-        L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png').addTo(mapa);
 
-        casas.forEach(casa => {{
-            let cor;
-            switch (casa["Certificado Energético"]) {{
-                case "A+": cor = "green"; break;
-                case "A": cor = "lime"; break;
-                case "B": cor = "yellow"; break;
-                case "C": cor = "orange"; break;
-                default: cor = "red";
-            }}
-            const marker = L.circleMarker([casa.Latitude, casa.Longitude], {{
-                radius: 10,
-                color: cor,
-                fillOpacity: 0.8
-            }}).addTo(mapa);
-            marker.bindPopup(`<b>${{casa.Descrição}}</b><br>${{casa.Morada}}<br>Certificado: <b>${{casa["Certificado Energético"]}}</b>`);
-        }});
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        const casas = {{ casas_json|safe }};
+
+        const map = L.map('map').setView([38.7169, -9.1399], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        casas.forEach(casa => {
+            const cor = {
+                'A': 'green',
+                'B': 'lime',
+                'C': 'yellow',
+                'D': 'orange',
+                'E': 'red',
+                'F': 'darkred',
+                'G': 'black'
+            }[casa["Certificado Energético"].toUpperCase()] || 'gray';
+
+            const marker = L.circleMarker([casa["Latitude"], casa["Longitude"]], {
+                radius: 8,
+                fillColor: cor,
+                color: '#000',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.9
+            }).addTo(map);
+
+            marker.bindPopup(
+                `<b>${casa["Descrição"]}</b><br>` +
+                `${casa["Morada"]}<br>` +
+                `Certificado: <b>${casa["Certificado Energético"]}</b>`
+            );
+        });
     </script>
 </body>
 </html>
-"""
-
-@app.route('/')
-def index():
-    casas_json = json.dumps(casas)
-    content = '<div id="map"></div>'
-    if 'logado' in session:
-        user_casas = [c for c in casas if c['Código'] == session['codigo']]
-        user_ids = [c['ID'] for c in user_casas]
-        user_consumos = [c for c in consumos if c['ID Casa'] in user_ids]
-
-        if user_consumos:
-            content += '<div class="private-section nasa-box"><h2>Consumos da Sua Casa</h2>'
-            content += '<table><tr><th>Tipo</th><th>Período</th><th>Valor</th><th>Unidade</th><th>Custo (€)</th></tr>'
-            for consumo in user_consumos:
-                content += f"<tr><td>{consumo['Tipo Consumo']}</td><td>{consumo['Período']}</td><td>{consumo['Valor']}</td><td>{consumo['Unidade']}</td><td>{consumo['Custo (€)']}</td></tr>"
-            content += '</table>'
-            content += '<p><a class="btn" href="/logout">Sair da Área Privada</a></p></div>'
-        else:
-            content += '<div class="private-section nasa-box"><p>Sem consumos registados.</p><a class="btn" href="/logout">Sair</a></div>'
-    else:
-        content += '''
-        <div class="login-section">
-            <h2>Área Privada</h2>
-            <form method="POST" action="/login">
-                <label for="codigo">Código do Proprietário:</label><br>
-                <input type="password" name="codigo" id="codigo" required><br>
-                <button class="btn" type="submit">Entrar</button>
-            </form>
-        </div>
-        '''
-    return render_template_string(HTML_BASE, content=content, casas_json=casas_json)
+    ''', casas_json=casas_json, logged_in=logged_in, nome_proprietario=nome_proprietario, consumos=consumos)
 
 @app.route('/login', methods=['POST'])
 def login():
-    codigo = request.form['codigo']
+    id_input = request.form['id']
+    senha_input = request.form['senha']
+    casas = get_casas()
     for casa in casas:
-        if casa['Código'] == codigo:
-            session['logado'] = True
-            session['codigo'] = codigo
-            flash("Login efetuado com sucesso!", "info")
+        if str(casa['ID']) == id_input and str(casa['Senha']) == senha_input:
+            session['user'] = casa
             return redirect(url_for('index'))
-    flash("Código inválido!", "error")
+    session['erro'] = True
     return redirect(url_for('index'))
 
 @app.route('/logout')
 def logout():
-    session.clear()
-    flash("Logout realizado com sucesso.", "info")
-    return redirect(url_for('index'))
+    session.pop('user', None)
+    return '''
+        <script>
+            alert("Logout efetuado com sucesso.");
+            window.location.href = "/";
+        </script>
+    '''
 
 if __name__ == '__main__':
     app.run(debug=True)
