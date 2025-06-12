@@ -185,7 +185,7 @@ function criarIcone(cor){
 
 fetch('/todas_casas').then(r=>r.json()).then(casas => {
   casas.forEach(c => {
-    const cor = cores[c.certificado] || cores[''];
+    const cor = cores[c.certificado.trim()] || cores[''];
     const icon = criarIcone(cor);
     const marker = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
     let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
@@ -203,7 +203,7 @@ function adicionarMarcador(){
   if(isNaN(lat)||isNaN(lng)){alert('Valores inválidos');return;}
   fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(c=>{
     if(!c.latitude){alert('Casa não encontrada'); return;}
-    const cor = cores[c.certificado]||cores[''];
+    const cor = cores[c.certificado.trim()]||cores[''];
     const icon = criarIcone(cor);
     const mark = L.marker([c.latitude,c.longitude],{icon}).addTo(map);
     let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
@@ -253,7 +253,7 @@ def todas_casas():
                         'longitude': lng,
                         'descricao': d.get('Descrição', ''),
                         'morada': d.get('Morada', ''),
-                        'certificado': d.get('Certificado energético', ''),
+                        'certificado': d.get('Certificado energético', '').strip(),
                         'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
                     })
                 except Exception:
@@ -280,7 +280,7 @@ def get_certificado():
                         'longitude': lng_c,
                         'descricao': d.get('Descrição', ''),
                         'morada': d.get('Morada', ''),
-                        'certificado': d.get('Certificado energético', ''),
+                        'certificado': d.get('Certificado energético', '').strip(),
                         'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
                     })
             except Exception:
