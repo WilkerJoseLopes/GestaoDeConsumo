@@ -26,73 +26,71 @@ HTML = """<!DOCTYPE html>
   <title>Gestão de Consumo</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
-html, body {margin:0; padding:0; height:100%}
-body {
-  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  display:flex; flex-direction:column; min-height:100vh;
-  background-color:#f4f7f9; color:#333;
-}
-header {
-  background-color:#0077cc; color:white;
-  padding:1rem 2rem; display:flex;
-  justify-content:space-between; align-items:center;
-  flex-wrap:wrap;
-}
-header h1 {margin:0; font-weight:600; font-size:1.8rem;}
-header h1 a {color:white; text-decoration:none;}
-#header-right {display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
-#header-right a, #header-right span {
-  font-size:1rem; color:white; text-decoration:none; cursor:pointer;
-}
-#header-right a:hover {text-decoration:underline;}
-main {
-  flex:1; padding:20px; max-width:960px; margin:0 auto;
-  width:100%; display:flex; flex-direction:column; gap:20px;
-}
-#form-coords {text-align:center;}
-input[type="number"], input[type="text"], input[type="password"] {
-  padding:10px; margin:8px; width:200px; max-width:90%;
-  border-radius:6px; border:1px solid #ccc; box-sizing:border-box;
-}
-button {
-  padding:10px 16px; border:none; border-radius:6px;
-  background-color:#0077cc; color:white; cursor:pointer;
-}
-button:hover {background-color:#005fa3;}
-#map {
-  height:500px; width:100%;
-  border-radius:10px;
-  box-shadow:0 0 12px rgba(0,0,0,0.15);
-  background-color:lightgray;
-}
-footer {
-  background-color:#222; color:#ccc;
-  text-align:center; padding:15px 20px; font-size:0.9em;
-  width:100%;
-}
-.alert {
-  color:red; font-weight:bold; text-align:center;
-}
-
-/* Modal login */
-#loginModal {
-  display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-  background-color:rgba(0,0,0,0.5); z-index:1000;
-  justify-content:center; align-items:center;
-}
-#loginModalContent {
-  background:white; padding:30px; border-radius:10px;
-  box-shadow:0 0 20px rgba(0,0,0,0.2); text-align:center;
-}
-@media (max-width:600px) {
-  header {flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;}
-  #header-right {width:100%; justify-content:space-between;}
-  h1 {font-size:1.5em;}
-  #form-coords {display:flex; flex-direction:column; align-items:center;}
-  input, button {width:90%; margin:6px 0;}
-  #map {height:300px;}
-}
-</style>
+    html, body {margin:0; padding:0; height:100%}
+    body {
+      font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display:flex; flex-direction:column; min-height:100vh;
+      background-color:#f4f7f9; color:#333;
+    }
+    header {
+      background-color:#0077cc; color:white;
+      padding:1rem 2rem; display:flex;
+      justify-content:space-between; align-items:center;
+      flex-wrap:wrap;
+    }
+    header h1 {margin:0; font-weight:600; font-size:1.8rem;}
+    header h1 a {color:white; text-decoration:none;}
+    #header-right {display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
+    #header-right a, #header-right span {
+      font-size:1rem; color:white; text-decoration:none; cursor:pointer;
+    }
+    #header-right a:hover {text-decoration:underline;}
+    main {
+      flex:1; padding:20px; max-width:960px; margin:0 auto;
+      width:100%; display:flex; flex-direction:column; gap:20px;
+    }
+    #form-coords {text-align:center;}
+    input[type="number"], input[type="text"], input[type="password"] {
+      padding:10px; margin:8px; width:200px; max-width:90%;
+      border-radius:6px; border:1px solid #ccc; box-sizing:border-box;
+    }
+    button {
+      padding:10px 16px; border:none; border-radius:6px;
+      background-color:#0077cc; color:white; cursor:pointer;
+    }
+    button:hover {background-color:#005fa3;}
+    #map {
+      height:500px; width:100%;
+      border-radius:10px;
+      box-shadow:0 0 12px rgba(0,0,0,0.15);
+      background-color:lightgray;
+    }
+    footer {
+      background-color:#222; color:#ccc;
+      text-align:center; padding:15px 20px; font-size:0.9em;
+      width:100%;
+    }
+    .alert {
+      color:red; font-weight:bold; text-align:center;
+    }
+    #loginModal {
+      display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+      background-color:rgba(0,0,0,0.5); z-index:1000;
+      justify-content:center; align-items:center;
+    }
+    #loginModalContent {
+      background:white; padding:30px; border-radius:10px;
+      box-shadow:0 0 20px rgba(0,0,0,0.2); text-align:center;
+    }
+    @media (max-width:600px) {
+      header {flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;}
+      #header-right {width:100%; justify-content:space-between;}
+      h1 {font-size:1.5em;}
+      #form-coords {display:flex; flex-direction:column; align-items:center;}
+      input, button {width:90%; margin:6px 0;}
+      #map {height:300px;}
+    }
+  </style>
 </head>
 <body>
 <header>
@@ -167,7 +165,6 @@ function enviarSenha(){
   });
 }
 
-// Mapa
 const map = L.map('map').setView([41.1578, -8.6291], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -178,24 +175,24 @@ const cores = {
   'G+':'444444','G':'000000','G-':'222222','':'0000FF'
 };
 
-function criarIcone(c){
-  const svg = <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-    <path fill="#${c}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
-  </svg>;
+function criarIcone(cor){
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+    <path fill="#${cor}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
+  </svg>`;
   return L.divIcon({html: svg, iconSize:[32,45], iconAnchor:[16,44], popupAnchor:[0,-40], className:''});
 }
 
 fetch('/todas_casas').then(r=>r.json()).then(casas => {
   casas.forEach(c => {
-    const cor = cores[c.certificado]||cores[''];
+    const cor = cores[c.certificado] || cores[''];
     const icon = criarIcone(cor);
-    const m = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
-    let texto = <strong>${c.morada}</strong><br>${c.descricao}<br>
+    const marker = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
+    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
                  Latitude: ${c.latitude.toFixed(5)}<br>
                  Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>;
-    if (c.proprietario) texto += <br><em>Proprietário: ${c.proprietario}</em>;
-    m.bindPopup(texto);
+                 Certificado: <strong>${c.certificado}</strong>`;
+    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
+    marker.bindPopup(texto);
   });
 });
 
@@ -203,16 +200,16 @@ function adicionarMarcador(){
   const lat = parseFloat(document.getElementById('latitude').value);
   const lng = parseFloat(document.getElementById('longitude').value);
   if(isNaN(lat)||isNaN(lng)){alert('Valores inválidos');return;}
-  fetch(/get_certificado?lat=${lat}&lng=${lng}).then(r=>r.json()).then(c=>{
+  fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(c=>{
     if(!c.latitude){alert('Casa não encontrada'); return;}
     const cor = cores[c.certificado]||cores[''];
     const icon = criarIcone(cor);
     const mark = L.marker([c.latitude,c.longitude],{icon}).addTo(map);
-    let texto = <strong>${c.morada}</strong><br>${c.descricao}<br>
+    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
                  Latitude: ${c.latitude.toFixed(5)}<br>
                  Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>;
-    if (c.proprietario) texto += <br><em>Proprietário: ${c.proprietario}</em>;
+                 Certificado: <strong>${c.certificado}</strong>`;
+    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
     mark.bindPopup(texto).openPopup();
     map.setView([c.latitude,c.longitude],16);
   }).catch(_=>alert('Erro ao buscar casa'));
@@ -237,7 +234,7 @@ def verifica_senha():
 @app.route('/logout')
 def logout():
     session.clear()
-    session['mensagem'] = 'Logout realizado com sucesso.'
+    session['messagem'] = 'Logout realizado com sucesso.'
     return redirect('/')
 
 @app.route('/todas_casas')
