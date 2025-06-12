@@ -50,6 +50,13 @@ HTML = """<!DOCTYPE html>
     input, button {padding:10px; margin:8px; border-radius:6px; border:1px solid #ccc; box-sizing:border-box;}
     button {background-color:#0077cc; color:white; border:none; cursor:pointer;}
     button:hover{background-color:#005fa3;}
+    #search-container {
+      display: flex; gap:10px; flex-wrap: wrap; justify-content: center; align-items: center;
+      background: #e2eaf1; padding: 15px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    #search-container input {
+      width: 150px;
+    }
   </style>
 </head>
 <body>
@@ -68,6 +75,16 @@ HTML = """<!DOCTYPE html>
   {% if mensagem %}
     <div class="alert">{{ mensagem }}</div>
   {% endif %}
+
+  <!-- Formulário de pesquisa por latitude e longitude -->
+  <div id="search-container">
+    <label for="latInput">Latitude:</label>
+    <input type="number" step="any" id="latInput" placeholder="Ex: 41.1578" />
+    <label for="lngInput">Longitude:</label>
+    <input type="number" step="any" id="lngInput" placeholder="Ex: -8.6291" />
+    <button onclick="irParaCoordenadas()">Ir</button>
+  </div>
+
   <div id="map"></div>
 </main>
 <div id="loginModal">
@@ -80,8 +97,8 @@ HTML = """<!DOCTYPE html>
     <p id="erroSenha" style="color:red; font-weight:bold;"></p>
   </div>
 </div>
-<footer>
-  Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos.
+<footer style="background-color:#0077cc; color:#f5f5f5; padding: 15px; text-align:center; font-weight:bold; font-size:0.95rem;">
+  © 2024 Wilker José Lopes – Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos.
 </footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -143,6 +160,18 @@ fetch('/todas_casas')
       marker.bindPopup(texto);
     });
   });
+
+// Função para ir para as coordenadas inseridas
+function irParaCoordenadas(){
+  const lat = parseFloat(document.getElementById('latInput').value);
+  const lng = parseFloat(document.getElementById('lngInput').value);
+  if(!isNaN(lat) && !isNaN(lng)){
+    map.setView([lat, lng], 15);
+    L.marker([lat, lng]).addTo(map).bindPopup(`Você está aqui:<br>Lat: ${lat.toFixed(5)}<br>Lng: ${lng.toFixed(5)}`).openPopup();
+  } else {
+    alert('Por favor, insira valores válidos para latitude e longitude.');
+  }
+}
 </script>
 </body>
 </html>
