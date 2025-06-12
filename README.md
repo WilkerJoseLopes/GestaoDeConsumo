@@ -29,6 +29,12 @@ Nesta fase, o foco foi a implementação de um mapa interativo hospedado no Rend
 
 📄 Link do Render 🔗 **[Acessar o Render](https://gestaodeconsumo.onrender.com)** 
 
+## 🔐 Área Privada
+
+Para acessar a área privada do sistema, utilize a seguinte senha:
+
+**Senha:** `Adming3`
+
 ## 🎯 Escala de Avaliação do Certificado Energético
 
 Tabela que representa o desempenho com base no certificado energético e cores associadas:
