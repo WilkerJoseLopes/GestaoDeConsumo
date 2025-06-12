@@ -253,7 +253,7 @@ def todas_casas():
                         'longitude': lng,
                         'descricao': d.get('Descrição', ''),
                         'morada': d.get('Morada', ''),
-                        'certificado': d.get('Certificado energético', '').strip(),
+                        'certificado': d.get('Certificado Energético', '').strip(),
                         'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
                     })
                 except Exception:
