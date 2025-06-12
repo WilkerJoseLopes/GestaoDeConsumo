@@ -14,9 +14,11 @@ try:
     client = gspread.authorize(creds)
     planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
     folha_casa = planilha.worksheet("Dados Casa")
+    folha_consumos = planilha.worksheet("Dados Consumos")
 except Exception as e:
     print("Erro init Google Sheets:", e)
     folha_casa = None
+    folha_consumos = None
 
 HTML = """<!DOCTYPE html>
 <html lang="pt">
@@ -82,6 +84,24 @@ HTML = """<!DOCTYPE html>
       background:white; padding:30px; border-radius:10px;
       box-shadow:0 0 20px rgba(0,0,0,0.2); text-align:center;
     }
+    /* Tabela de consumos só aparece após login */
+    #consumosTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: #222;
+    }
+    #consumosTable th, #consumosTable td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    #consumosTable th {
+      background-color: #0077cc;
+      color: white;
+      font-weight: 600;
+    }
     @media (max-width:600px) {
       header {flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;}
       #header-right {width:100%; justify-content:space-between;}
@@ -89,6 +109,7 @@ HTML = """<!DOCTYPE html>
       #form-coords {display:flex; flex-direction:column; align-items:center;}
       input, button {width:90%; margin:6px 0;}
       #map {height:300px;}
+      #consumosTable {font-size: 0.8rem;}
     }
   </style>
 </head>
@@ -115,6 +136,40 @@ HTML = """<!DOCTYPE html>
     <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
   </div>
   <div id="map"></div>
+
+  {% if session.get('logado') %}
+  <section id="area-privada-consumos">
+    <h2>Consumos das Casas</h2>
+    {% if consumos %}
+      <table id="consumosTable">
+        <thead>
+          <tr>
+            <th>ID Casa</th>
+            <th>Tipo Consumo</th>
+            <th>Período</th>
+            <th>Valor</th>
+            <th>Unidade</th>
+            <th>Custo (€)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in consumos %}
+          <tr>
+            <td>{{ c['ID Casa'] }}</td>
+            <td>{{ c['Tipo Consumo'] }}</td>
+            <td>{{ c['Período'] }}</td>
+            <td>{{ c['Valor'] }}</td>
+            <td>{{ c['Unidade'] }}</td>
+            <td>{{ c['Custo (€)'] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>Nenhum consumo encontrado.</p>
+    {% endif %}
+  </section>
+  {% endif %}
 </main>
 
 <div id="loginModal">
@@ -176,109 +231,60 @@ const cores = {
 };
 
 function criarIcone(cor){
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-    <path fill="#${cor}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42">
+    <path fill="#${cor}" d="M16 1C9 1 4 7 4 13c0 9 12 24 12 24s12-15 12-24c0-6-5-12-12-12z"/>
   </svg>`;
-  return L.divIcon({html: svg, iconSize:[32,45], iconAnchor:[16,44], popupAnchor:[0,-40], className:''});
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [32, 42],
+    iconAnchor: [16, 42]
+  });
 }
 
-fetch('/todas_casas').then(r=>r.json()).then(casas => {
-  casas.forEach(c => {
-    const cor = cores[c.certificado] || cores[''];
-    const icon = criarIcone(cor);
-    const marker = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
-    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
-                 Latitude: ${c.latitude.toFixed(5)}<br>
-                 Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>`;
-    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
-    marker.bindPopup(texto);
-  });
-});
-
 function adicionarMarcador(){
-  const lat = parseFloat(document.getElementById('latitude').value);
-  const lng = parseFloat(document.getElementById('longitude').value);
-  if(isNaN(lat)||isNaN(lng)){alert('Valores inválidos');return;}
-  fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(c=>{
-    if(!c.latitude){alert('Casa não encontrada'); return;}
-    const cor = cores[c.certificado]||cores[''];
-    const icon = criarIcone(cor);
-    const mark = L.marker([c.latitude,c.longitude],{icon}).addTo(map);
-    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
-                 Latitude: ${c.latitude.toFixed(5)}<br>
-                 Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>`;
-    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
-    mark.bindPopup(texto).openPopup();
-    map.setView([c.latitude,c.longitude],16);
-  }).catch(_=>alert('Erro ao buscar casa'));
+  const lat = parseFloat(document.getElementById("latitude").value);
+  const lng = parseFloat(document.getElementById("longitude").value);
+  if(isNaN(lat) || isNaN(lng)){
+    alert("Por favor insira coordenadas válidas.");
+    return;
+  }
+  L.marker([lat, lng]).addTo(map)
+    .bindPopup(`<b>Localização do usuário</b><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`)
+    .openPopup();
+  map.setView([lat, lng], 15);
 }
 </script>
 </body>
-</html>
-"""
+</html>"""
 
 @app.route('/')
 def index():
-    return render_template_string(HTML, session=session, mensagem=session.pop('mensagem', ''))
+    mensagem = ''
+    if session.get('logado'):
+        # Puxa os consumos da planilha para exibir na área privada
+        try:
+            registros_consumos = folha_consumos.get_all_records() if folha_consumos else []
+        except Exception:
+            registros_consumos = []
+        return render_template_string(HTML, session=session, mensagem=mensagem, consumos=registros_consumos)
+    else:
+        return render_template_string(HTML, session=session, mensagem=mensagem, consumos=[])
 
 @app.route('/verifica_senha', methods=['POST'])
 def verifica_senha():
-    senha = request.json.get('senha')
-    if senha == 'Adming3':
+    dados = request.get_json()
+    senha = dados.get('senha', '')
+    if senha == "Adming3":
         session['logado'] = True
-        return jsonify({'ok': True})
-    return jsonify({'ok': False})
+        return jsonify({"ok": True})
+    else:
+        return jsonify({"ok": False})
 
 @app.route('/logout')
 def logout():
-    session.clear()
-    session['messagem'] = 'Logout realizado com sucesso.'
+    session.pop('logado', None)
     return redirect('/')
 
-@app.route('/todas_casas')
-def todas_casas():
-    if not folha_casa: return jsonify([])
-    regs = folha_casa.get_all_records()
-    casas = []
-    for reg in regs:
-        try:
-            casa = {
-                'latitude': float(reg.get('Latitude',0)),
-                'longitude': float(reg.get('Longitude',0)),
-                'morada': reg.get('Morada',''),
-                'descricao': reg.get('Descrição',''),
-                'certificado': reg.get('Certificado Energético','').strip()
-            }
-            if session.get('logado'):
-                casa['proprietario'] = reg.get('Proprietário', '')
-            casas.append(casa)
-        except:
-            pass
-    return jsonify(casas)
-
-@app.route('/get_certificado')
-def get_certificado():
-    lat = request.args.get('lat', type=float)
-    lng = request.args.get('lng', type=float)
-    if not folha_casa or lat is None or lng is None: return jsonify({})
-    for reg in folha_casa.get_all_records():
-        try:
-            if abs(float(reg.get('Latitude',0))-lat)<1e-5 and abs(float(reg.get('Longitude',0))-lng)<1e-5:
-                casa = {
-                    'latitude': float(reg.get('Latitude',0)),
-                    'longitude': float(reg.get('Longitude',0)),
-                    'morada': reg.get('Morada',''),
-                    'descricao': reg.get('Descrição',''),
-                    'certificado': reg.get('Certificado Energético','').strip()
-                }
-                if session.get('logado'):
-                    casa['proprietario'] = reg.get('Proprietário', '')
-                return jsonify(casa)
-        except:
-            pass
-    return jsonify({})
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
