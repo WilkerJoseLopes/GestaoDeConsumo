@@ -176,9 +176,10 @@ const cores = {
 };
 
 function criarIcone(cor){
-  const svg = <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-    <path fill="#${cor}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
-  </svg>;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+      <path fill="#${cor}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
+    </svg>`;
   return L.divIcon({html: svg, iconSize:[32,45], iconAnchor:[16,44], popupAnchor:[0,-40], className:''});
 }
 
@@ -187,11 +188,11 @@ fetch('/todas_casas').then(r=>r.json()).then(casas => {
     const cor = cores[c.certificado] || cores[''];
     const icon = criarIcone(cor);
     const marker = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
-    let texto = <strong>${c.morada}</strong><br>${c.descricao}<br>
+    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
                  Latitude: ${c.latitude.toFixed(5)}<br>
                  Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>;
-    if (c.proprietario) texto += <br><em>Proprietário: ${c.proprietario}</em>;
+                 Certificado: <strong>${c.certificado}</strong>`;
+    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
     marker.bindPopup(texto);
   });
 });
@@ -200,16 +201,16 @@ function adicionarMarcador(){
   const lat = parseFloat(document.getElementById('latitude').value);
   const lng = parseFloat(document.getElementById('longitude').value);
   if(isNaN(lat)||isNaN(lng)){alert('Valores inválidos');return;}
-  fetch(/get_certificado?lat=${lat}&lng=${lng}).then(r=>r.json()).then(c=>{
+  fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(c=>{
     if(!c.latitude){alert('Casa não encontrada'); return;}
     const cor = cores[c.certificado]||cores[''];
     const icon = criarIcone(cor);
     const mark = L.marker([c.latitude,c.longitude],{icon}).addTo(map);
-    let texto = <strong>${c.morada}</strong><br>${c.descricao}<br>
+    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
                  Latitude: ${c.latitude.toFixed(5)}<br>
                  Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>;
-    if (c.proprietario) texto += <br><em>Proprietário: ${c.proprietario}</em>;
+                 Certificado: <strong>${c.certificado}</strong>`;
+    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
     mark.bindPopup(texto).openPopup();
     map.setView([c.latitude,c.longitude],16);
   }).catch(_=>alert('Erro ao buscar casa'));
@@ -228,56 +229,64 @@ def verifica_senha():
     senha = request.json.get('senha')
     if senha == 'Adming3':
         session['logado'] = True
-        return jsonify({'ok': True})
-    return jsonify({'ok': False})
+        return jsonify(ok=True)
+    return jsonify(ok=False)
 
 @app.route('/logout')
 def logout():
     session.clear()
-    session['messagem'] = 'Logout realizado com sucesso.'
+    session['mensagem'] = 'Logout realizado com sucesso.'
     return redirect('/')
 
 @app.route('/todas_casas')
 def todas_casas():
-    if not folha_casa: return jsonify([])
-    regs = folha_casa.get_all_records()
     casas = []
-    for reg in regs:
+    if folha_casa:
         try:
-            casa = {
-                'latitude': float(reg.get('Latitude',0)),
-                'longitude': float(reg.get('Longitude',0)),
-                'morada': reg.get('Morada',''),
-                'descricao': reg.get('Descrição',''),
-                'certificado': reg.get('Certificado Energético','').strip()
-            }
-            if session.get('logado'):
-                casa['proprietario'] = reg.get('Proprietário', '')
-            casas.append(casa)
-        except:
-            pass
+            dados = folha_casa.get_all_records()
+            for d in dados:
+                try:
+                    lat = float(d.get('Latitude', 0))
+                    lng = float(d.get('Longitude', 0))
+                    casas.append({
+                        'latitude': lat,
+                        'longitude': lng,
+                        'descricao': d.get('Descrição', ''),
+                        'morada': d.get('Morada', ''),
+                        'certificado': d.get('Certificado energético', ''),
+                        'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
+                    })
+                except Exception:
+                    continue
+        except Exception as e:
+            print("Erro leitura dados casas:", e)
     return jsonify(casas)
 
 @app.route('/get_certificado')
 def get_certificado():
     lat = request.args.get('lat', type=float)
     lng = request.args.get('lng', type=float)
-    if not folha_casa or lat is None or lng is None: return jsonify({})
-    for reg in folha_casa.get_all_records():
-        try:
-            if abs(float(reg.get('Latitude',0))-lat)<1e-5 and abs(float(reg.get('Longitude',0))-lng)<1e-5:
-                casa = {
-                    'latitude': float(reg.get('Latitude',0)),
-                    'longitude': float(reg.get('Longitude',0)),
-                    'morada': reg.get('Morada',''),
-                    'descricao': reg.get('Descrição',''),
-                    'certificado': reg.get('Certificado Energético','').strip()
-                }
-                if session.get('logado'):
-                    casa['proprietario'] = reg.get('Proprietário', '')
-                return jsonify(casa)
-        except:
-            pass
+    if not (lat and lng and folha_casa):
+        return jsonify({})
+    try:
+        dados = folha_casa.get_all_records()
+        for d in dados:
+            try:
+                lat_c = float(d.get('Latitude', 0))
+                lng_c = float(d.get('Longitude', 0))
+                if abs(lat - lat_c) < 0.0001 and abs(lng - lng_c) < 0.0001:
+                    return jsonify({
+                        'latitude': lat_c,
+                        'longitude': lng_c,
+                        'descricao': d.get('Descrição', ''),
+                        'morada': d.get('Morada', ''),
+                        'certificado': d.get('Certificado energético', ''),
+                        'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
+                    })
+            except Exception:
+                continue
+    except Exception as e:
+        print("Erro get_certificado:", e)
     return jsonify({})
 
 if __name__ == '__main__':
