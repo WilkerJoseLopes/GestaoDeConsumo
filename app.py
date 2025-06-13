@@ -14,11 +14,11 @@ try:
     client = gspread.authorize(creds)
     planilha = client.open_by_key("1SKveqiaBaYqyQ5JadM59JKQhd__jodFZfjl78KUGa9w")
     folha_casa = planilha.worksheet("Dados Casa")
-    folha_consumo = planilha.worksheet("Dados Consumos")
+    folha_consumos = planilha.worksheet("Dados Consumos")
 except Exception as e:
     print("Erro init Google Sheets:", e)
     folha_casa = None
-    folha_consumo = None
+    folha_consumos = None
 
 HTML = """<!DOCTYPE html>
 <html lang="pt">
@@ -67,6 +67,28 @@ HTML = """<!DOCTYPE html>
       box-shadow:0 0 12px rgba(0,0,0,0.15);
       background-color:lightgray;
     }
+    #consumos {
+      background:#fff; padding:15px; border-radius:10px;
+      box-shadow:0 0 12px rgba(0,0,0,0.1);
+      max-width:960px; margin:0 auto 20px auto;
+    }
+    #consumos h2 {
+      margin-top:0; color:#0077cc;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 100%;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align:left;
+    }
+    th {
+      background-color: #0077cc;
+      color: white;
+    }
     footer {
       background-color:#222; color:#ccc;
       text-align:center; padding:15px 20px; font-size:0.9em;
@@ -74,6 +96,7 @@ HTML = """<!DOCTYPE html>
     }
     .alert {
       color:red; font-weight:bold; text-align:center;
+      max-width:960px; margin:10px auto;
     }
     #loginModal {
       display:none; position:fixed; top:0; left:0; width:100%; height:100%;
@@ -83,17 +106,8 @@ HTML = """<!DOCTYPE html>
     #loginModalContent {
       background:white; padding:30px; border-radius:10px;
       box-shadow:0 0 20px rgba(0,0,0,0.2); text-align:center;
-    }
-    table {
-      width:100%; border-collapse:collapse; margin-top:20px;
-      background:white; border-radius:8px; overflow:hidden;
-      box-shadow:0 0 10px rgba(0,0,0,0.1);
-    }
-    th, td {
-      padding:12px 15px; text-align:left; border-bottom:1px solid #eee;
-    }
-    th {
-      background-color:#0077cc; color:white;
+      max-width: 320px;
+      width: 90%;
     }
     @media (max-width:600px) {
       header {flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;}
@@ -102,6 +116,7 @@ HTML = """<!DOCTYPE html>
       #form-coords {display:flex; flex-direction:column; align-items:center;}
       input, button {width:90%; margin:6px 0;}
       #map {height:300px;}
+      #consumos {padding:10px;}
     }
   </style>
 </head>
@@ -118,6 +133,16 @@ HTML = """<!DOCTYPE html>
   </div>
 </header>
 
+{% if session.get('logado') %}
+  <section id="consumos">
+    <h2>Consumos da Casa Selecionada</h2>
+    <div id="tabela-consumos">
+      <!-- Tabela será preenchida pelo JS -->
+      <p>Selecione uma casa no mapa para ver os consumos.</p>
+    </div>
+  </section>
+{% endif %}
+
 <main>
   {% if mensagem %}
     <div class="alert">{{ mensagem }}</div>
@@ -128,10 +153,6 @@ HTML = """<!DOCTYPE html>
     <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
   </div>
   <div id="map"></div>
-
-  {% if session.get('logado') %}
-    <div id="consumos"></div>
-  {% endif %}
 </main>
 
 <div id="loginModal">
@@ -156,6 +177,7 @@ function confirmarLogout(){
     window.location.href = "/logout";
   }
 }
+
 function abrirLogin(){
   document.getElementById("loginModal").style.display = "flex";
 }
@@ -192,151 +214,145 @@ const cores = {
 };
 
 function criarIcone(cor){
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-      <path fill="#${cor}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+      <path fill="#${cor}" stroke="#555" stroke-width="2" d="M16 0C9 0 0 10 0 18c0 11 16 27 16 27s16-16 16-27c0-8-9-18-16-18z"/>
+      <circle fill="#fff" cx="16" cy="18" r="7"/>
     </svg>`;
-  return L.divIcon({html: svg, iconSize:[32,45], iconAnchor:[16,44], popupAnchor:[0,-40], className:''});
+  const url = "data:image/svg+xml;base64,"+btoa(svg);
+  return L.icon({
+    iconUrl: url,
+    iconSize: [32,45],
+    iconAnchor: [16,45],
+    popupAnchor: [0,-40]
+  });
 }
 
-fetch('/todas_casas').then(r=>r.json()).then(casas => {
-  casas.forEach(c => {
-    const cor = cores[c.certificado.trim()] || cores[''];
-    const icon = criarIcone(cor);
-    const marker = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
-    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
-                 Latitude: ${c.latitude.toFixed(5)}<br>
-                 Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>`;
-    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
-    marker.bindPopup(texto);
+let marcadores = {};
+let casas = [];
 
-    {% if session.get('logado') %}
-    marker.on('click', function() {
-      fetch(`/consumos?id=${c.id}`).then(r=>r.json()).then(consumos=>{
-        let html = "<h3>Consumos da Casa</h3>";
-        html += "<table><tr><th>Período</th><th>Tipo</th><th>Valor</th><th>Custo (€)</th></tr>";
-        consumos.forEach(l=>{
-          html += `<tr><td>${l.periodo}</td><td>${l.tipo}</td><td>${l.valor} ${l.unidade}</td><td>${l.custo}</td></tr>`;
-        });
-        html += "</table>";
-        document.getElementById("consumos").innerHTML = html;
-      });
-    });
-    {% endif %}
+async function carregarCasas(){
+  const res = await fetch('/todas_casas');
+  casas = await res.json();
+  casas.forEach(casa => {
+    const cor = cores[casa.certificado || ''] || '0000FF';
+    const icon = criarIcone(cor);
+    const marker = L.marker([casa.latitude, casa.longitude], {icon});
+    marker.addTo(map);
+    marker.bindPopup(
+      `<b>${casa.descricao}</b><br/>${casa.morada}<br/>
+      Certificado: <b>${casa.certificado || "N/A"}</b><br/>
+      <button onclick="mostrarConsumos('${casa.id}')">Ver Consumos</button>`
+    );
+    marcadores[casa.id] = marker;
   });
-});
+}
+
+function mostrarConsumos(idCasa){
+  if(!idCasa) return;
+  fetch(`/consumos?id=${encodeURIComponent(idCasa)}`)
+  .then(r => r.json())
+  .then(dados => {
+    if(!dados.length){
+      document.getElementById('tabela-consumos').innerHTML = "<p>Sem dados de consumo para esta casa.</p>";
+      return;
+    }
+    let html = `<table>
+      <thead>
+        <tr><th>Tipo</th><th>Período</th><th>Valor</th><th>Custo (€)</th></tr>
+      </thead><tbody>`;
+    dados.forEach(c=>{
+      html += `<tr>
+        <td>${c["Tipo Consumo"]}</td>
+        <td>${c["Período"]}</td>
+        <td>${c.Valor} ${c.Unidade}</td>
+        <td>${parseFloat(c.Custo).toFixed(2)}</td>
+      </tr>`;
+    });
+    html += "</tbody></table>";
+    document.getElementById('tabela-consumos').innerHTML = html;
+  });
+}
 
 function adicionarMarcador(){
   const lat = parseFloat(document.getElementById('latitude').value);
-  const lng = parseFloat(document.getElementById('longitude').value);
-  if(isNaN(lat)||isNaN(lng)){alert('Valores inválidos');return;}
-  fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(c=>{
-    if(!c.latitude){alert('Casa não encontrada'); return;}
-    const cor = cores[c.certificado.trim()]||cores[''];
-    const mark = L.marker([c.latitude,c.longitude],{icon:criarIcone(cor)}).addTo(map);
-    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
-                 Latitude: ${c.latitude.toFixed(5)}<br>
-                 Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>`;
-    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
-    mark.bindPopup(texto).openPopup();
-    map.setView([c.latitude,c.longitude],16);
-  }).catch(_=>alert('Erro ao buscar casa'));
+  const lon = parseFloat(document.getElementById('longitude').value);
+  if(isNaN(lat) || isNaN(lon)){
+    alert("Por favor, insira valores válidos para latitude e longitude.");
+    return;
+  }
+  map.setView([lat, lon], 15);
+  // Criar marcador temporário
+  const markerTemp = L.marker([lat, lon]).addTo(map);
+  markerTemp.bindPopup(`Casa temporária em:<br/>Lat: ${lat.toFixed(5)}, Lon: ${lon.toFixed(5)}`).openPopup();
 }
+
+window.addEventListener('DOMContentLoaded', () => {
+  carregarCasas();
+
+  // Faz o texto da mensagem sumir depois de 3 segundos
+  const alert = document.querySelector('.alert');
+  if(alert){
+    setTimeout(() => { alert.style.display = 'none'; }, 3000);
+  }
+});
 </script>
 </body>
 </html>
 """
 
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template_string(HTML, session=session, mensagem=session.pop('mensagem', ''))
+    mensagem = session.pop("mensagem", None)
+    return render_template_string(HTML, mensagem=mensagem)
 
-@app.route('/verifica_senha', methods=['POST'])
-def verifica_senha():
-    senha = request.json.get('senha')
-    if senha == 'Adming3':
-        session['logado'] = True
-        return jsonify(ok=True)
-    return jsonify(ok=False)
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    session['mensagem'] = 'Logout realizado com sucesso.'
-    return redirect('/')
-
-@app.route('/todas_casas')
+@app.route("/todas_casas")
 def todas_casas():
     casas = []
     if folha_casa:
         try:
             dados = folha_casa.get_all_records()
             for d in dados:
-                try:
-                    lat = float(d.get('Latitude', 0))
-                    lng = float(d.get('Longitude', 0))
-                    casas.append({
-                        'id': d.get('ID Casa', ''),
-                        'latitude': lat,
-                        'longitude': lng,
-                        'descricao': d.get('Descrição', ''),
-                        'morada': d.get('Morada', ''),
-                        'certificado': d.get('Certificado Energético', '').strip(),
-                        'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
-                    })
-                except Exception:
-                    continue
+                casas.append({
+                    'id': str(d.get('ID Casa', '')).strip(),
+                    'descricao': d.get('Descrição', ''),
+                    'morada': d.get('Morada', ''),
+                    'latitude': float(d.get('Latitude', 0)),
+                    'longitude': float(d.get('Longitude', 0)),
+                    'certificado': d.get('Certificado Energético', '').strip()
+                })
         except Exception as e:
-            print("Erro leitura dados casas:", e)
+            print("Erro ao ler casas:", e)
     return jsonify(casas)
 
-@app.route('/get_certificado')
-def get_certificado():
-    lat = request.args.get('lat', type=float)
-    lng = request.args.get('lng', type=float)
-    if not (lat and lng and folha_casa):
-        return jsonify({})
-    try:
-        dados = folha_casa.get_all_records()
-        for d in dados:
-            try:
-                lat_c = float(d.get('Latitude', 0))
-                lng_c = float(d.get('Longitude', 0))
-                if abs(lat - lat_c) < 0.0001 and abs(lng - lng_c) < 0.0001:
-                    return jsonify({
-                        'latitude': lat_c,
-                        'longitude': lng_c,
-                        'descricao': d.get('Descrição', ''),
-                        'morada': d.get('Morada', ''),
-                        'certificado': d.get('Certificado energético', '').strip(),
-                        'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
-                    })
-            except Exception:
-                continue
-    except Exception as e:
-        print("Erro leitura casa:", e)
-    return jsonify({})
-
-@app.route('/consumos')
+@app.route("/consumos")
 def consumos():
-    if not session.get('logado') or not folha_consumo:
-        return jsonify([])
-    id_casa = request.args.get('id')
-    try:
-        dados = folha_consumo.get_all_records()
-        consumos = [d for d in dados if str(d.get('ID Casa')) == str(id_casa)]
-        resultado = [{
-            'tipo': d.get('Tipo Consumo', ''),
-            'periodo': d.get('Período', ''),
-            'valor': d.get('Valor', ''),
-            'unidade': d.get('Unidade', ''),
-            'custo': d.get('Custo (€)', '')
-        } for d in consumos]
-        return jsonify(resultado)
-    except Exception as e:
-        print("Erro leitura consumos:", e)
-    return jsonify([])
+    id_casa = request.args.get('id', '').strip()
+    consumos = []
+    if folha_consumos:
+        try:
+            dados = folha_consumos.get_all_records()
+            consumos = [d for d in dados if str(d.get('ID Casa', '')).strip() == id_casa]
+        except Exception as e:
+            print("Erro ao ler consumos:", e)
+    return jsonify(consumos)
 
-if __name__ == '__main__':
+@app.route("/verifica_senha", methods=["POST"])
+def verifica_senha():
+    dados = request.get_json()
+    senha = dados.get("senha", "")
+    # Senha fixa para exemplo
+    if senha == "1234":
+        session['logado'] = True
+        return jsonify({"ok": True})
+    else:
+        return jsonify({"ok": False})
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    session['mensagem'] = "Logout realizado com sucesso."
+    return redirect("/")
+
+if __name__ == "__main__":
     app.run(debug=True)
