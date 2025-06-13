@@ -230,113 +230,109 @@ function adicionarMarcador(){
   const lat = parseFloat(document.getElementById('latitude').value);
   const lng = parseFloat(document.getElementById('longitude').value);
   if(isNaN(lat)||isNaN(lng)){alert('Valores inválidos');return;}
-  fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(c=>{
-    if(!c.latitude){alert('Casa não encontrada'); return;}
-    const cor = cores[c.certificado.trim()]||cores[''];
-    const mark = L.marker([c.latitude,c.longitude],{icon:criarIcone(cor)}).addTo(map);
-    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
-                 Latitude: ${c.latitude.toFixed(5)}<br>
-                 Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>`;
-    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
-    mark.bindPopup(texto).openPopup();
-    map.setView([c.latitude,c.longitude],16);
-  }).catch(_=>alert('Erro ao buscar casa'));
+  fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(casa=>{
+    if(casa.latitude && casa.longitude){
+      const cor = cores[casa.certificado.trim()] || cores[''];
+      const icon = criarIcone(cor);
+      const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
+      let texto = `<strong>${casa.morada}</strong><br>${casa.descricao}<br>
+                   Latitude: ${casa.latitude.toFixed(5)}<br>
+                   Longitude: ${casa.longitude.toFixed(5)}<br>
+                   Certificado: <strong>${casa.certificado}</strong>`;
+      if(casa.proprietario) texto += `<br><em>Proprietário: ${casa.proprietario}</em>`;
+      marker.bindPopup(texto).openPopup();
+      map.setView([casa.latitude, casa.longitude], 16);
+    } else {
+      alert('Casa não encontrada para as coordenadas dadas.');
+    }
+  });
 }
 </script>
 </body>
-</html>
-"""
+</html>"""
 
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template_string(HTML, session=session, mensagem=session.pop('mensagem', ''))
+    return render_template_string(HTML, session=session, mensagem=session.pop('mensagem', ''), logado=session.get('logado', False))
 
-@app.route('/verifica_senha', methods=['POST'])
+@app.route("/verifica_senha", methods=["POST"])
 def verifica_senha():
-    senha = request.json.get('senha')
-    if senha == 'Adming3':
-        session['logado'] = True
+    dados = request.get_json()
+    senha = dados.get("senha", "")
+    if senha == "Adming3":
+        session["logado"] = True
+        session["mensagem"] = "Bem-vindo à Área Privada!"
         return jsonify(ok=True)
-    return jsonify(ok=False)
+    else:
+        return jsonify(ok=False)
 
-@app.route('/logout')
+@app.route("/logout")
 def logout():
     session.clear()
-    session['mensagem'] = 'Logout realizado com sucesso.'
-    return redirect('/')
+    session["mensagem"] = "Sessão encerrada com sucesso."
+    return redirect("/")
 
-@app.route('/todas_casas')
+@app.route("/todas_casas")
 def todas_casas():
+    if not folha_casa:
+        return jsonify([])
+    dados = folha_casa.get_all_records()
     casas = []
-    if folha_casa:
-        try:
-            dados = folha_casa.get_all_records()
-            for d in dados:
-                try:
-                    lat = float(d.get('Latitude', 0))
-                    lng = float(d.get('Longitude', 0))
-                    casas.append({
-                        'id': d.get('ID Casa', ''),
-                        'latitude': lat,
-                        'longitude': lng,
-                        'descricao': d.get('Descrição', ''),
-                        'morada': d.get('Morada', ''),
-                        'certificado': d.get('Certificado Energético', '').strip(),
-                        'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
-                    })
-                except Exception:
-                    continue
-        except Exception as e:
-            print("Erro leitura dados casas:", e)
+    for d in dados:
+        casas.append({
+            'id': d.get('ID', ''),
+            'descricao': d.get('Descrição', ''),
+            'morada': d.get('Morada', ''),
+            'latitude': float(d.get('Latitude', 0)),
+            'longitude': float(d.get('Longitude', 0)),
+            'certificado': d.get('Certificado Energético', '').strip(),
+            'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
+        })
     return jsonify(casas)
 
-@app.route('/get_certificado')
+@app.route("/get_certificado")
 def get_certificado():
-    lat = request.args.get('lat', type=float)
-    lng = request.args.get('lng', type=float)
-    if not (lat and lng and folha_casa):
+    if not folha_casa:
         return jsonify({})
-    try:
-        dados = folha_casa.get_all_records()
-        for d in dados:
-            try:
-                lat_c = float(d.get('Latitude', 0))
-                lng_c = float(d.get('Longitude', 0))
-                if abs(lat - lat_c) < 0.0001 and abs(lng - lng_c) < 0.0001:
-                    return jsonify({
-                        'latitude': lat_c,
-                        'longitude': lng_c,
-                        'descricao': d.get('Descrição', ''),
-                        'morada': d.get('Morada', ''),
-                        'certificado': d.get('Certificado energético', '').strip(),
-                        'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
-                    })
-            except Exception:
-                continue
-    except Exception as e:
-        print("Erro leitura casa:", e)
+    lat_c = float(request.args.get("lat", "0"))
+    lng_c = float(request.args.get("lng", "0"))
+    dados = folha_casa.get_all_records()
+    for d in dados:
+        try:
+            lat = float(d.get('Latitude', 0))
+            lng = float(d.get('Longitude', 0))
+        except:
+            continue
+        if abs(lat - lat_c) < 0.0002 and abs(lng - lng_c) < 0.0002:
+            return jsonify({
+                'latitude': lat,
+                'longitude': lng,
+                'descricao': d.get('Descrição', ''),
+                'morada': d.get('Morada', ''),
+                'certificado': d.get('Certificado Energético', '').strip(),
+                'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
+            })
     return jsonify({})
 
-@app.route('/consumos')
+@app.route("/consumos")
 def consumos():
-    if not session.get('logado') or not folha_consumo:
+    if not folha_consumo:
         return jsonify([])
-    id_casa = request.args.get('id')
-    try:
-        dados = folha_consumo.get_all_records()
-        consumos = [d for d in dados if str(d.get('ID Casa')) == str(id_casa)]
-        resultado = [{
-            'tipo': d.get('Tipo Consumo', ''),
-            'periodo': d.get('Período', ''),
-            'valor': d.get('Valor', ''),
-            'unidade': d.get('Unidade', ''),
-            'custo': d.get('Custo (€)', '')
-        } for d in consumos]
-        return jsonify(resultado)
-    except Exception as e:
-        print("Erro leitura consumos:", e)
-    return jsonify([])
+    id_casa = request.args.get("id")
+    if not id_casa:
+        return jsonify([])
+    dados = folha_consumo.get_all_records()
+    consumos = []
+    for d in dados:
+        if str(d.get('ID Casa', '')) == str(id_casa):
+            consumos.append({
+                'tipo': d.get('Tipo Consumo', ''),
+                'periodo': d.get('Período', ''),
+                'valor': d.get('Valor', ''),
+                'unidade': d.get('Unidade', ''),
+                'custo': d.get('Custo (€)', '')
+            })
+    return jsonify(consumos)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
