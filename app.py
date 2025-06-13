@@ -1,3 +1,5 @@
+import os
+import json
 from flask import Flask, render_template_string, request, redirect, session
 import gspread
 from google.oauth2.service_account import Credentials
@@ -6,11 +8,14 @@ from collections import defaultdict
 app = Flask(__name__)
 app.secret_key = "segredo"
 
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+
 # Autenticação com Google Sheets
-    GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
-    creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
-    client = gspread.authorize(creds)
-sheet = gc.open("GestaoCasas")
+GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
+creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
+client = gspread.authorize(creds)
+
+sheet = client.open("GestaoCasas")
 casas_sheet = sheet.worksheet("Dados Casa")
 consumos_sheet = sheet.worksheet("Dados Consumos")
 
