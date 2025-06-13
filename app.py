@@ -104,6 +104,13 @@ HTML = """<!DOCTYPE html>
     th {
       background-color:#0077cc; color:white;
     }
+    .consumo-section {
+      margin-bottom: 30px;
+    }
+    .consumo-section h3 {
+      color: #0077cc;
+      margin-bottom: 10px;
+    }
     @media (max-width:600px) {
       header {flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;}
       #header-right {width:100%; justify-content:space-between;}
@@ -273,23 +280,96 @@ function carregarCasas(){
 function carregarConsumos(idCasa){
   fetch("/consumos?id="+idCasa).then(r=>r.json()).then(data=>{
     const consumosDiv = document.getElementById("consumos");
-    if(data.length === 0){
+    if(data.agua.length === 0 && data.energia.length === 0 && data.gas.length === 0){
       consumosDiv.innerHTML = "<p>Nenhum consumo encontrado para esta casa.</p>";
       return;
     }
-    let tabela = `<table><thead><tr>
-      <th>Tipo</th><th>Período</th><th>Valor</th><th>Custo (€)</th>
-    </tr></thead><tbody>`;
-    data.forEach(c=>{
-      tabela += `<tr>
-        <td>${c.tipo}</td>
-        <td>${c.periodo}</td>
-        <td>${c.valor} ${c.unidade}</td>
-        <td>${c.custo}</td>
-      </tr>`;
-    });
-    tabela += "</tbody></table>";
-    consumosDiv.innerHTML = tabela;
+    
+    let html = '<div style="display: flex; flex-direction: column; gap: 30px;">';
+    
+    // Água
+    if(data.agua.length > 0){
+      html += `<div class="consumo-section">
+        <h3>Consumo de Água</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Período</th>
+              <th>Valor</th>
+              <th>Custo (€)</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      
+      data.agua.forEach(c=>{
+        html += `<tr>
+          <td>${c.periodo}</td>
+          <td>${c.valor} ${c.unidade}</td>
+          <td>${c.custo}</td>
+        </tr>`;
+      });
+      
+      html += `</tbody>
+        </table>
+      </div>`;
+    }
+    
+    // Energia
+    if(data.energia.length > 0){
+      html += `<div class="consumo-section">
+        <h3>Consumo de Energia</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Período</th>
+              <th>Valor</th>
+              <th>Custo (€)</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      
+      data.energia.forEach(c=>{
+        html += `<tr>
+          <td>${c.periodo}</td>
+          <td>${c.valor} ${c.unidade}</td>
+          <td>${c.custo}</td>
+        </tr>`;
+      });
+      
+      html += `</tbody>
+        </table>
+      </div>`;
+    }
+    
+    // Gás
+    if(data.gas.length > 0){
+      html += `<div class="consumo-section">
+        <h3>Consumo de Gás</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Período</th>
+              <th>Valor</th>
+              <th>Custo (€)</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      
+      data.gas.forEach(c=>{
+        html += `<tr>
+          <td>${c.periodo}</td>
+          <td>${c.valor} ${c.unidade}</td>
+          <td>${c.custo}</td>
+        </tr>`;
+      });
+      
+      html += `</tbody>
+        </table>
+      </div>`;
+    }
+    
+    html += '</div>';
+    consumosDiv.innerHTML = html;
   });
 }
 
@@ -323,6 +403,7 @@ function adicionarMarcador(){
     }
   });
 }
+
 function filtrarPorClasse() {
   const classeSelecionada = document.getElementById("filtroClasse").value;
   fetch("/todas_casas").then(r=>r.json()).then(data=>{
@@ -442,23 +523,40 @@ def get_certificado():
 @app.route("/consumos")
 def consumos():
     if not folha_consumo:
-        return jsonify([])
+        return jsonify({'agua': [], 'energia': [], 'gas': []})
     id_casa = request.args.get("id")
     if not id_casa:
-        return jsonify([])
+        return jsonify({'agua': [], 'energia': [], 'gas': []})
+    
     dados = folha_consumo.get_all_records()
-    consumos = []
+    
+    # Separar consumos por tipo
+    agua = []
+    energia = []
+    gas = []
+    
     for d in dados:
         if str(d.get('ID Casa', '')) == str(id_casa):
-            consumos.append({
+            consumo = {
                 'tipo': d.get('Tipo Consumo', ''),
                 'periodo': d.get('Período', ''),
                 'valor': d.get('Valor', ''),
                 'unidade': d.get('Unidade', ''),
                 'custo': d.get('Custo (€)', '')
-            })
-    return jsonify(consumos)
+            }
+            tipo = consumo['tipo'].lower()
+            if 'água' in tipo or 'agua' in tipo:
+                agua.append(consumo)
+            elif 'energia' in tipo:
+                energia.append(consumo)
+            elif 'gás' in tipo or 'gas' in tipo:
+                gas.append(consumo)
+    
+    return jsonify({
+        'agua': agua,
+        'energia': energia,
+        'gas': gas
+    })
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-    
