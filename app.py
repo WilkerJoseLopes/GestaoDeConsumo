@@ -535,7 +535,6 @@ def consumos():
     
     dados = folha_consumo.get_all_records()
     
-    # Separar consumos por tipo
     agua = []
     energia = []
     gas = []
