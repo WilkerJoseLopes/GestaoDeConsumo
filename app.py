@@ -136,6 +136,31 @@ HTML = """<!DOCTYPE html>
     <input type="number" id="longitude" step="any" placeholder="Longitude"/>
     <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
     <button onclick="limparPesquisa()">Limpar Pesquisa</button>
+    <br/>
+    <select id="filtroClasse" onchange="filtrarPorClasse()">
+      <option value="">Todas as classes energéticas</option>
+      <option value="A+">A+</option>
+      <option value="A">A</option>
+      <option value="A-">A-</option>
+      <option value="B+">B+</option>
+      <option value="B">B</option>
+      <option value="B-">B-</option>
+      <option value="C+">C+</option>
+      <option value="C">C</option>
+      <option value="C-">C-</option>
+      <option value="D+">D+</option>
+      <option value="D">D</option>
+      <option value="D-">D-</option>
+      <option value="E+">E+</option>
+      <option value="E">E</option>
+      <option value="E-">E-</option>
+      <option value="F+">F+</option>
+      <option value="F">F</option>
+      <option value="F-">F-</option>
+      <option value="G+">G+</option>
+      <option value="G">G</option>
+      <option value="G-">G-</option>
+    </select>
   </div>
   <div id="map"></div>
 
@@ -298,11 +323,37 @@ function adicionarMarcador(){
     }
   });
 }
+function filtrarPorClasse() {
+  const classeSelecionada = document.getElementById("filtroClasse").value;
+  fetch("/todas_casas").then(r=>r.json()).then(data=>{
+    limparMarkers();
+    data.forEach(casa=>{
+      if (!classeSelecionada || casa.certificado.trim() === classeSelecionada) {
+        const cor = cores[casa.certificado.trim()] || cores[''];
+        const icon = criarIcone(cor);
+        const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
+        let texto = `<strong>${casa.morada}</strong><br>${casa.descricao}<br>
+                     Latitude: ${casa.latitude.toFixed(5)}<br>
+                     Longitude: ${casa.longitude.toFixed(5)}<br>
+                     Certificado: <strong>${casa.certificado}</strong>`;
+        if (casa.proprietario) texto += `<br><em>Proprietário: ${casa.proprietario}</em>`;
+        marker.bindPopup(texto);
+        marker.on('click', () => {
+          marker.openPopup();
+          if({{ 'true' if session.get('logado') else 'false' }}) {
+            carregarConsumos(casa.id);
+          }
+        });
+        markers.push(marker);
+      }
+    });
+  });
+}
 
 function limparPesquisa(){
   document.getElementById("latitude").value = "";
   document.getElementById("longitude").value = "";
-  carregarCasas();  // Recarrega todos os marcadores
+  carregarCasas();
   map.setView([41.1578, -8.6291], 12); 
   document.getElementById("consumos").innerHTML = "";  
 }
