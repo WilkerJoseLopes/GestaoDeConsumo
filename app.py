@@ -33,14 +33,14 @@ HTML = """<!DOCTYPE html>
       font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display:flex; flex-direction:column; min-height:100vh;
       background-color:#f4f7f9; color:#333;
-      user-select:none; /* Desabilita seleção em toda a página */
+      user-select:none; 
     }
     header {
       background-color:#0077cc; color:white;
       padding:1rem 2rem; display:flex;
       justify-content:space-between; align-items:center;
       flex-wrap:wrap;
-      user-select:none; /* impede seleção de texto no header */
+      user-select:none; 
     }
     header h1 {margin:0; font-weight:600; font-size:1.8rem;}
     header h1 a {color:white; text-decoration:none;}
@@ -52,13 +52,13 @@ HTML = """<!DOCTYPE html>
     main {
       flex:1; padding:20px; max-width:960px; margin:0 auto;
       width:100%; display:flex; flex-direction:column; gap:20px;
-      user-select:text; /* permite selecionar texto no conteúdo principal */
+      user-select:text; 
     }
     #form-coords {text-align:center;}
     input[type="number"], input[type="text"], input[type="password"] {
       padding:10px; margin:8px; width:200px; max-width:90%;
       border-radius:6px; border:1px solid #ccc; box-sizing:border-box;
-      user-select:text; /* permite seleção */
+      user-select:text; 
     }
     button {
       padding:10px 16px; border:none; border-radius:6px;
@@ -77,10 +77,10 @@ HTML = """<!DOCTYPE html>
       background-color:#222; color:#ccc;
       text-align:center; padding:15px 20px; font-size:0.9em;
       width:100%;
-      user-select:none; /* impede seleção no footer */
+      user-select:none; 
     }
     .alert {
-      color:red; font-weight:bold; text-align:center;
+      color:geen; font-weight:bold; text-align:center;
       opacity:1;
       transition: opacity 0.7s ease;
     }
@@ -155,8 +155,7 @@ HTML = """<!DOCTYPE html>
 </div>
 
 <footer>
-  Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos.<br>
-  Os dados apresentados são fictícios e para fins de demonstração.
+  Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos. Os dados apresentados são fictícios e para fins de demonstração.
 </footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -302,7 +301,6 @@ function adicionarMarcador(){
 window.onload = function(){
   carregarCasas();
 
-  // Esconde a mensagem automaticamente após 3s
   const msg = document.getElementById("mensagem-alert");
   if(msg){
     setTimeout(() => {
@@ -325,7 +323,7 @@ def index():
 def verifica_senha():
     dados = request.get_json()
     senha = dados.get("senha", "")
-    if senha == "123456":
+    if senha == "adming3":
         session["logado"] = True
         session["mensagem"] = "Bem-vindo à Área Privada!"
         return jsonify(ok=True)
