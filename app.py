@@ -375,9 +375,70 @@ window.onload = function(){
 </html>
 """
 
+#@app.route("/")
+#def index():
+    #return render_template_string(HTML, session=session, mensagem=session.pop('mensagem', ''), logado=session.get('logado', False))
+def get_houses():
+    if not folha_casa:
+        return []
+    dados = folha_casa.get_all_records()
+    casas = []
+    for d in dados:
+        casas.append({
+            'id': d.get('ID', ''),
+            'descricao': d.get('Descrição', ''),
+            'morada': d.get('Morada', ''),
+            'latitude': float(d.get('Latitude', 0)),
+            'longitude': float(d.get('Longitude', 0)),
+            'certificado': d.get('Certificado Energético', '').strip(),
+            'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
+        })
+    return casas
+
+def get_consumptions_for_house(house_id):
+    if not folha_consumo or not house_id:
+        return []
+    dados = folha_consumo.get_all_records()
+    consumos = []
+    for d in dados:
+        if str(d.get('ID Casa', '')) == str(house_id):
+            consumos.append({
+                'tipo': d.get('Tipo Consumo', ''),
+                'periodo': d.get('Período', ''),
+                'valor': d.get('Valor', ''),
+                'unidade': d.get('Unidade', ''),
+                'custo': d.get('Custo (€)', '')
+            })
+    return consumos
+
+# --- Rota principal ---
+
 @app.route("/")
 def index():
-    return render_template_string(HTML, session=session, mensagem=session.pop('mensagem', ''), logado=session.get('logado', False))
+    houses = get_houses()
+    logged_in = session.get('logado', False)
+    selected_house_id = session.get('selected_house_id')
+    owner_name = session.get('owner_name')
+
+    info_msg = None
+    if logged_in and not selected_house_id:
+        info_msg = "Clique numa casa para ver os consumos."
+
+    consumptions = get_consumptions_for_house(selected_house_id) if selected_house_id else []
+
+    return render_template_string(
+        HTML,
+        session=session,
+        mensagem=session.pop('mensagem', ''),
+        logado=logged_in,
+        houses=houses,
+        owner_name=owner_name,
+        selected_house_id=selected_house_id,
+        consumptions=consumptions,
+        info_msg=info_msg
+    )
+
+# --- Rota para verificar senha ---
 
 @app.route("/verifica_senha", methods=["POST"])
 def verifica_senha():
@@ -390,11 +451,15 @@ def verifica_senha():
     else:
         return jsonify(ok=False)
 
+# --- Rota para logout ---
+
 @app.route("/logout")
 def logout():
     session.clear()
     session["mensagem"] = "Sessão encerrada com sucesso."
     return redirect("/")
+
+# --- Rota para retornar todas casas (JSON) ---
 
 @app.route("/todas_casas")
 def todas_casas():
@@ -413,6 +478,8 @@ def todas_casas():
             'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
         })
     return jsonify(casas)
+
+# --- Rota para pegar certificado pelo lat/lng ---
 
 @app.route("/get_certificado")
 def get_certificado():
@@ -439,6 +506,8 @@ def get_certificado():
             })
     return jsonify({})
 
+# --- Rota para consumos da casa ---
+
 @app.route("/consumos")
 def consumos():
     if not folha_consumo:
@@ -458,6 +527,19 @@ def consumos():
                 'custo': d.get('Custo (€)', '')
             })
     return jsonify(consumos)
+
+# --- Rota para salvar casa selecionada na sessão via AJAX ---
+
+@app.route("/seleciona_casa", methods=["POST"])
+def seleciona_casa():
+    dados = request.get_json()
+    id_casa = dados.get("id_casa")
+    proprietario = dados.get("proprietario")
+    if id_casa:
+        session['selected_house_id'] = id_casa
+        session['owner_name'] = proprietario
+        return jsonify(ok=True)
+    return jsonify(ok=False)
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
