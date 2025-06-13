@@ -28,17 +28,19 @@ HTML = """<!DOCTYPE html>
   <title>Gestão de Consumo</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
-    html, body {margin:0; padding:0; height:100%}
+    html, body {margin:0; padding:0; height:100%; overflow-x:hidden;}
     body {
       font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display:flex; flex-direction:column; min-height:100vh;
       background-color:#f4f7f9; color:#333;
+      user-select:none; /* Desabilita seleção em toda a página */
     }
     header {
       background-color:#0077cc; color:white;
       padding:1rem 2rem; display:flex;
       justify-content:space-between; align-items:center;
       flex-wrap:wrap;
+      user-select:none; /* impede seleção de texto no header */
     }
     header h1 {margin:0; font-weight:600; font-size:1.8rem;}
     header h1 a {color:white; text-decoration:none;}
@@ -50,15 +52,18 @@ HTML = """<!DOCTYPE html>
     main {
       flex:1; padding:20px; max-width:960px; margin:0 auto;
       width:100%; display:flex; flex-direction:column; gap:20px;
+      user-select:text; /* permite selecionar texto no conteúdo principal */
     }
     #form-coords {text-align:center;}
     input[type="number"], input[type="text"], input[type="password"] {
       padding:10px; margin:8px; width:200px; max-width:90%;
       border-radius:6px; border:1px solid #ccc; box-sizing:border-box;
+      user-select:text; /* permite seleção */
     }
     button {
       padding:10px 16px; border:none; border-radius:6px;
       background-color:#0077cc; color:white; cursor:pointer;
+      user-select:none;
     }
     button:hover {background-color:#005fa3;}
     #map {
@@ -66,14 +71,18 @@ HTML = """<!DOCTYPE html>
       border-radius:10px;
       box-shadow:0 0 12px rgba(0,0,0,0.15);
       background-color:lightgray;
+      user-select:none;
     }
     footer {
       background-color:#222; color:#ccc;
       text-align:center; padding:15px 20px; font-size:0.9em;
       width:100%;
+      user-select:none; /* impede seleção no footer */
     }
     .alert {
       color:red; font-weight:bold; text-align:center;
+      opacity:1;
+      transition: opacity 0.7s ease;
     }
     #loginModal {
       display:none; position:fixed; top:0; left:0; width:100%; height:100%;
@@ -120,7 +129,7 @@ HTML = """<!DOCTYPE html>
 
 <main>
   {% if mensagem %}
-    <div class="alert">{{ mensagem }}</div>
+    <div id="mensagem-alert" class="alert">{{ mensagem }}</div>
   {% endif %}
   <div id="form-coords">
     <input type="number" id="latitude" step="any" placeholder="Latitude"/>
@@ -146,7 +155,8 @@ HTML = """<!DOCTYPE html>
 </div>
 
 <footer>
-  Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos.
+  Este sistema é fictício e destina-se exclusivamente a fins académicos e demonstrativos.<br>
+  Os dados apresentados são fictícios e para fins de demonstração.
 </footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -193,45 +203,28 @@ const cores = {
 
 function criarIcone(cor){
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-      <path fill="#${cor}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
+      <path fill="#${cor}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,28 16,44 16,44 C16,44 1,28 1,16 C1,7.7 7.7,1 16,1 Z"/>
     </svg>`;
-  return L.divIcon({html: svg, iconSize:[32,45], iconAnchor:[16,44], popupAnchor:[0,-40], className:''});
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [32,45],
+    iconAnchor: [16,44],
+    popupAnchor: [0,-40]
+  });
 }
 
-fetch('/todas_casas').then(r=>r.json()).then(casas => {
-  casas.forEach(c => {
-    const cor = cores[c.certificado.trim()] || cores[''];
-    const icon = criarIcone(cor);
-    const marker = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
-    let texto = `<strong>${c.morada}</strong><br>${c.descricao}<br>
-                 Latitude: ${c.latitude.toFixed(5)}<br>
-                 Longitude: ${c.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${c.certificado}</strong>`;
-    if (c.proprietario) texto += `<br><em>Proprietário: ${c.proprietario}</em>`;
-    marker.bindPopup(texto);
+let markers = [];
 
-    {% if session.get('logado') %}
-    marker.on('click', function() {
-      fetch(`/consumos?id=${c.id}`).then(r=>r.json()).then(consumos=>{
-        let html = "<h3>Consumos da Casa</h3>";
-        html += "<table><tr><th>Período</th><th>Tipo</th><th>Valor</th><th>Custo (€)</th></tr>";
-        consumos.forEach(l=>{
-          html += `<tr><td>${l.periodo}</td><td>${l.tipo}</td><td>${l.valor} ${l.unidade}</td><td>${l.custo}</td></tr>`;
-        });
-        html += "</table>";
-        document.getElementById("consumos").innerHTML = html;
-      });
-    });
-    {% endif %}
-  });
-});
+function limparMarkers(){
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+}
 
-function adicionarMarcador(){
-  const lat = parseFloat(document.getElementById('latitude').value);
-  const lng = parseFloat(document.getElementById('longitude').value);
-  if(isNaN(lat)||isNaN(lng)){alert('Valores inválidos');return;}
-  fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(casa=>{
-    if(casa.latitude && casa.longitude){
+function carregarCasas(){
+  fetch("/todas_casas").then(r=>r.json()).then(data=>{
+    limparMarkers();
+    data.forEach(casa=>{
       const cor = cores[casa.certificado.trim()] || cores[''];
       const icon = criarIcone(cor);
       const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
@@ -240,16 +233,89 @@ function adicionarMarcador(){
                    Longitude: ${casa.longitude.toFixed(5)}<br>
                    Certificado: <strong>${casa.certificado}</strong>`;
       if(casa.proprietario) texto += `<br><em>Proprietário: ${casa.proprietario}</em>`;
+      marker.bindPopup(texto);
+      marker.on('click', () => {
+        marker.openPopup();
+        if({{ 'true' if session.get('logado') else 'false' }}) {
+          carregarConsumos(casa.id);
+        }
+      });
+      markers.push(marker);
+    });
+  });
+}
+
+function carregarConsumos(idCasa){
+  fetch("/consumos?id="+idCasa).then(r=>r.json()).then(data=>{
+    const consumosDiv = document.getElementById("consumos");
+    if(data.length === 0){
+      consumosDiv.innerHTML = "<p>Nenhum consumo encontrado para esta casa.</p>";
+      return;
+    }
+    let tabela = `<table><thead><tr>
+      <th>Tipo</th><th>Período</th><th>Valor</th><th>Custo (€)</th>
+    </tr></thead><tbody>`;
+    data.forEach(c=>{
+      tabela += `<tr>
+        <td>${c.tipo}</td>
+        <td>${c.periodo}</td>
+        <td>${c.valor} ${c.unidade}</td>
+        <td>${c.custo}</td>
+      </tr>`;
+    });
+    tabela += "</tbody></table>";
+    consumosDiv.innerHTML = tabela;
+  });
+}
+
+function adicionarMarcador(){
+  const lat = parseFloat(document.getElementById("latitude").value);
+  const lng = parseFloat(document.getElementById("longitude").value);
+  if(isNaN(lat) || isNaN(lng)){
+    alert("Por favor, insira valores válidos para latitude e longitude.");
+    return;
+  }
+  fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(casa=>{
+    if(casa.latitude && casa.longitude){
+      const cor = cores[casa.certificado.trim()] || cores[''];
+      const icon = criarIcone(cor);
+      limparMarkers();
+      const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
+      let texto = `<strong>${casa.morada}</strong><br>${casa.descricao}<br>
+                   Latitude: ${casa.latitude.toFixed(5)}<br>
+                   Longitude: ${casa.longitude.toFixed(5)}<br>
+                   Certificado: <strong>${casa.certificado}</strong>`;
+      if(casa.proprietario) texto += `<br><em>Proprietário: ${casa.proprietario}</em>`;
       marker.bindPopup(texto).openPopup();
       map.setView([casa.latitude, casa.longitude], 16);
+
+      if({{ 'true' if session.get('logado') else 'false' }}) {
+        carregarConsumos(casa.id || "");
+      }
+      markers = [marker];
     } else {
       alert('Casa não encontrada para as coordenadas dadas.');
     }
   });
 }
+
+window.onload = function(){
+  carregarCasas();
+
+  // Esconde a mensagem automaticamente após 3s
+  const msg = document.getElementById("mensagem-alert");
+  if(msg){
+    setTimeout(() => {
+      msg.style.opacity = "0";
+      setTimeout(() => { msg.remove(); }, 800);
+    }, 3000);
+  }
+}
 </script>
+
 </body>
-</html>"""
+</html>
+"""
 
 @app.route("/")
 def index():
@@ -259,7 +325,7 @@ def index():
 def verifica_senha():
     dados = request.get_json()
     senha = dados.get("senha", "")
-    if senha == "Adming3":
+    if senha == "123456":
         session["logado"] = True
         session["mensagem"] = "Bem-vindo à Área Privada!"
         return jsonify(ok=True)
@@ -310,7 +376,8 @@ def get_certificado():
                 'descricao': d.get('Descrição', ''),
                 'morada': d.get('Morada', ''),
                 'certificado': d.get('Certificado Energético', '').strip(),
-                'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
+                'proprietario': d.get('Proprietário', '') if session.get('logado') else '',
+                'id': d.get('ID', '')
             })
     return jsonify({})
 
