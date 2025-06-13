@@ -55,7 +55,7 @@ HTML = """<!DOCTYPE html>
       user-select:text; 
     }
     #form-coords {text-align:center;}
-    input[type="number"], input[type="text"], input[type="password"], select {
+    input[type="number"], input[type="text"], input[type="password"] {
       padding:10px; margin:8px; width:200px; max-width:90%;
       border-radius:6px; border:1px solid #ccc; box-sizing:border-box;
       user-select:text; 
@@ -80,7 +80,7 @@ HTML = """<!DOCTYPE html>
       user-select:none; 
     }
     .alert {
-      color:green; font-weight:bold; text-align:center;
+      color:geen; font-weight:bold; text-align:center;
       opacity:1;
       transition: opacity 0.7s ease;
     }
@@ -109,7 +109,7 @@ HTML = """<!DOCTYPE html>
       #header-right {width:100%; justify-content:space-between;}
       h1 {font-size:1.5em;}
       #form-coords {display:flex; flex-direction:column; align-items:center;}
-      input, button, select {width:90%; margin:6px 0;}
+      input, button {width:90%; margin:6px 0;}
       #map {height:300px;}
     }
   </style>
@@ -137,36 +137,6 @@ HTML = """<!DOCTYPE html>
     <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
     <button onclick="limparPesquisa()">Limpar Pesquisa</button>
   </div>
-  
-  <div id="filtro-certificado" style="text-align:center; margin-bottom:15px;">
-    <label for="certificadoFiltro">Filtrar certificados Energéticos: </label>
-    <select id="certificadoFiltro" onchange="filtrarPorCertificado()">
-      <option value="">-- Todos --</option>
-      <option value="A+">A+</option>
-      <option value="A">A</option>
-      <option value="A-">A-</option>
-      <option value="B+">B+</option>
-      <option value="B">B</option>
-      <option value="B-">B-</option>
-      <option value="C+">C+</option>
-      <option value="C">C</option>
-      <option value="C-">C-</option>
-      <option value="D+">D+</option>
-      <option value="D">D</option>
-      <option value="D-">D-</option>
-      <option value="E+">E+</option>
-      <option value="E">E</option>
-      <option value="E-">E-</option>
-      <option value="F+">F+</option>
-      <option value="F">F</option>
-      <option value="F-">F-</option>
-      <option value="G+">G+</option>
-      <option value="G">G</option>
-      <option value="G-">G-</option>
-      <option value="">Sem Certificado</option>
-    </select>
-  </div>
-
   <div id="map"></div>
 
   {% if session.get('logado') %}
@@ -201,118 +171,101 @@ function abrirLogin(){
 }
 function fecharLogin(){
   document.getElementById("loginModal").style.display = "none";
-  document.getElementById("erroSenha").textContent = "";
   document.getElementById("senhaInput").value = "";
+  document.getElementById("erroSenha").textContent = "";
 }
 function enviarSenha(){
-  let senha = document.getElementById("senhaInput").value.trim();
-  if(senha.length === 0){
-    document.getElementById("erroSenha").textContent = "Por favor, digite a senha.";
-    return;
-  }
-  fetch('/login', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({senha: senha})
+  const senha = document.getElementById("senhaInput").value;
+  fetch("/verifica_senha", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({senha})
   })
-  .then(r => r.json())
-  .then(resp => {
-    if(resp.sucesso){
-      window.location.reload();
+  .then(r=>r.json())
+  .then(res=>{
+    if(res.ok){
+      location.reload();
     } else {
       document.getElementById("erroSenha").textContent = "Senha incorreta!";
     }
   });
 }
 
+const map = L.map('map').setView([41.1578, -8.6291], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
 const cores = {
-  "A+": "#008000", "A": "#00A000", "A-": "#40B040",
-  "B+": "#A2C52D", "B": "#ADFF2F", "B-": "#C1E18F",
-  "C+": "#FFD700", "C": "#FDD017", "C-": "#F0E68C",
-  "D+": "#FF8C00", "D": "#FF7F00", "D-": "#FFA500",
-  "E+": "#FF4500", "E": "#FF6347", "E-": "#FF7F50",
-  "F+": "#FF0000", "F": "#CD5C5C", "F-": "#B22222",
-  "G+": "#8B0000", "G": "#800000", "G-": "#660000",
-  "": "#777777"  // Sem certificado
+  'A+':'008000','A':'00AA00','A-':'33BB33','B+':'66CC00','B':'99CC00','B-':'BBD600',
+  'C+':'CCCC00','C':'FFFF00','C-':'FFDD00','D+':'FFB300','D':'FFA500','D-':'FF8800',
+  'E+':'FF6666','E':'FF0000','E-':'CC0000','F+':'A00000','F':'8B0000','F-':'660000',
+  'G+':'444444','G':'000000','G-':'222222','':'0000FF'
 };
 
-let map = L.map('map').setView([41.1578, -8.6291], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-  attribution: '© OpenStreetMap contributors'
-}).addTo(map);
-
-let markers = [];
-let todasCasasCache = [];
-
 function criarIcone(cor){
+  const svg = <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+      <path fill="#${cor}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,28 16,44 16,44 C16,44 1,28 1,16 C1,7.7 7.7,1 16,1 Z"/>
+    </svg>;
   return L.divIcon({
-    className: "custom-div-icon",
-    html: `<div style="background-color:${cor}; width:18px; height:18px; border-radius:50%; border:2px solid white;"></div>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9]
+    html: svg,
+    className: '',
+    iconSize: [32,45],
+    iconAnchor: [16,44],
+    popupAnchor: [0,-40]
   });
 }
+
+let markers = [];
 
 function limparMarkers(){
   markers.forEach(m => map.removeLayer(m));
   markers = [];
 }
 
-function mostrarCasasNoMapa(filtroCertificado = ""){
-  limparMarkers();
-  const filtro = filtroCertificado.trim();
-  const casasFiltradas = filtro
-    ? todasCasasCache.filter(casa => casa.certificado === filtro)
-    : todasCasasCache;
-
-  casasFiltradas.forEach(casa => {
-    const cor = cores[casa.certificado.trim()] || cores[''];
-    const icon = criarIcone(cor);
-    const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
-
-    let texto = `<strong>${casa.morada}</strong><br>${casa.descricao}<br>
-                 Latitude: ${casa.latitude.toFixed(5)}<br>
-                 Longitude: ${casa.longitude.toFixed(5)}<br>
-                 Certificado: <strong>${casa.certificado}</strong>`;
-    if(casa.proprietario) texto += `<br><em>Proprietário: ${casa.proprietario}</em>`;
-
-    marker.bindPopup(texto);
-    marker.on('click', () => {
-      marker.openPopup();
-      {% if session.get('logado') %}
-      carregarConsumos(casa.id);
-      {% endif %}
+function carregarCasas(){
+  fetch("/todas_casas").then(r=>r.json()).then(data=>{
+    limparMarkers();
+    data.forEach(casa=>{
+      const cor = cores[casa.certificado.trim()] || cores[''];
+      const icon = criarIcone(cor);
+      const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
+      let texto = <strong>${casa.morada}</strong><br>${casa.descricao}<br>
+                   Latitude: ${casa.latitude.toFixed(5)}<br>
+                   Longitude: ${casa.longitude.toFixed(5)}<br>
+                   Certificado: <strong>${casa.certificado}</strong>;
+      if(casa.proprietario) texto += <br><em>Proprietário: ${casa.proprietario}</em>;
+      marker.bindPopup(texto);
+      marker.on('click', () => {
+        marker.openPopup();
+        if({{ 'true' if session.get('logado') else 'false' }}) {
+          carregarConsumos(casa.id);
+        }
+      });
+      markers.push(marker);
     });
-    markers.push(marker);
-  });
-
-  if(markers.length > 0){
-    const group = new L.featureGroup(markers);
-    map.fitBounds(group.getBounds().pad(0.1));
-  }
-}
-
-function carregarCasas(filtroCertificado = ""){
-  fetch("/todas_casas").then(r => r.json()).then(data => {
-    todasCasasCache = data;
-    mostrarCasasNoMapa(filtroCertificado);
   });
 }
 
-function filtrarPorCertificado(){
-  const select = document.getElementById("certificadoFiltro");
-  const valor = select.value;
-  mostrarCasasNoMapa(valor);
-  document.getElementById("consumos").innerHTML = "";
-}
-
-function limparPesquisa(){
-  document.getElementById("latitude").value = "";
-  document.getElementById("longitude").value = "";
-  document.getElementById("certificadoFiltro").value = "";
-  carregarCasas();
-  map.setView([41.1578, -8.6291], 12);
-  document.getElementById("consumos").innerHTML = "";
+function carregarConsumos(idCasa){
+  fetch("/consumos?id="+idCasa).then(r=>r.json()).then(data=>{
+    const consumosDiv = document.getElementById("consumos");
+    if(data.length === 0){
+      consumosDiv.innerHTML = "<p>Nenhum consumo encontrado para esta casa.</p>";
+      return;
+    }
+    let tabela = <table><thead><tr>
+      <th>Tipo</th><th>Período</th><th>Valor</th><th>Custo (€)</th>
+    </tr></thead><tbody>;
+    data.forEach(c=>{
+      tabela += <tr>
+        <td>${c.tipo}</td>
+        <td>${c.periodo}</td>
+        <td>${c.valor} ${c.unidade}</td>
+        <td>${c.custo}</td>
+      </tr>;
+    });
+    tabela += "</tbody></table>";
+    consumosDiv.innerHTML = tabela;
+  });
 }
 
 function adicionarMarcador(){
@@ -322,32 +275,36 @@ function adicionarMarcador(){
     alert("Por favor, insira valores válidos para latitude e longitude.");
     return;
   }
-  limparMarkers();
-  const marker = L.marker([lat, lng]).addTo(map);
-  markers.push(marker);
-  map.setView([lat, lng], 16);
-  document.getElementById("consumos").innerHTML = "";
+  fetch(/get_certificado?lat=${lat}&lng=${lng}).then(r=>r.json()).then(casa=>{
+    if(casa.latitude && casa.longitude){
+      const cor = cores[casa.certificado.trim()] || cores[''];
+      const icon = criarIcone(cor);
+      limparMarkers();
+      const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
+      let texto = <strong>${casa.morada}</strong><br>${casa.descricao}<br>
+                   Latitude: ${casa.latitude.toFixed(5)}<br>
+                   Longitude: ${casa.longitude.toFixed(5)}<br>
+                   Certificado: <strong>${casa.certificado}</strong>;
+      if(casa.proprietario) texto += <br><em>Proprietário: ${casa.proprietario}</em>;
+      marker.bindPopup(texto).openPopup();
+      map.setView([casa.latitude, casa.longitude], 16);
+
+      if({{ 'true' if session.get('logado') else 'false' }}) {
+        carregarConsumos(casa.id || "");
+      }
+      markers = [marker];
+    } else {
+      alert('Casa não encontrada para as coordenadas dadas.');
+    }
+  });
 }
 
-function carregarConsumos(idCasa){
-  fetch(`/consumos/${idCasa}`).then(r => r.json()).then(data => {
-    if(!data || data.length === 0){
-      document.getElementById("consumos").innerHTML = "<p>Nenhum consumo disponível para esta casa.</p>";
-      return;
-    }
-    let html = `<h3>Consumos da Casa ID: ${idCasa}</h3><table>
-                <thead><tr><th>Tipo</th><th>Período</th><th>Valor</th><th>Custo (€)</th></tr></thead><tbody>`;
-    data.forEach(c => {
-      html += `<tr>
-        <td>${c.tipo}</td>
-        <td>${c.periodo}</td>
-        <td>${c.valor} ${c.unidade}</td>
-        <td>€${c.custo.toFixed(2)}</td>
-      </tr>`;
-    });
-    html += "</tbody></table>";
-    document.getElementById("consumos").innerHTML = html;
-  });
+function limparPesquisa(){
+  document.getElementById("latitude").value = "";
+  document.getElementById("longitude").value = "";
+  carregarCasas();  // Recarrega todos os marcadores
+  map.setView([41.1578, -8.6291], 12); 
+  document.getElementById("consumos").innerHTML = "";  
 }
 
 window.onload = function(){
@@ -360,7 +317,7 @@ window.onload = function(){
       setTimeout(() => { msg.remove(); }, 800);
     }, 3000);
   }
-};
+}
 </script>
 
 </body>
@@ -369,70 +326,87 @@ window.onload = function(){
 
 @app.route("/")
 def index():
-    mensagem = session.pop("mensagem", None)
-    return render_template_string(HTML, mensagem=mensagem, session=session)
+    return render_template_string(HTML, session=session, mensagem=session.pop('mensagem', ''), logado=session.get('logado', False))
 
-@app.route("/todas_casas")
-def todas_casas():
-    if folha_casa is None:
-        return jsonify([])
-
-    try:
-        dados = folha_casa.get_all_records()
-        casas = []
-        for linha in dados:
-            casas.append({
-                "id": linha.get("ID Casa", ""),
-                "descricao": linha.get("Descrição", ""),
-                "morada": linha.get("Morada", ""),
-                "latitude": float(linha.get("Latitude", 0)),
-                "longitude": float(linha.get("Longitude", 0)),
-                "certificado": linha.get("Certificado Energético", "").strip(),
-                "proprietario": linha.get("Proprietário", "").strip()
-            })
-        return jsonify(casas)
-    except Exception as e:
-        print("Erro ao buscar casas:", e)
-        return jsonify([])
-
-@app.route("/consumos/<id_casa>")
-def consumos(id_casa):
-    if folha_consumo is None:
-        return jsonify([])
-
-    try:
-        dados = folha_consumo.get_all_records()
-        consumos = []
-        for linha in dados:
-            if str(linha.get("ID Casa", "")) == str(id_casa):
-                consumos.append({
-                    "tipo": linha.get("Tipo Consumo", ""),
-                    "periodo": linha.get("Período", ""),
-                    "valor": linha.get("Valor", ""),
-                    "unidade": linha.get("Unidade", ""),
-                    "custo": float(linha.get("Custo (€)", 0) or 0)
-                })
-        return jsonify(consumos)
-    except Exception as e:
-        print("Erro ao buscar consumos:", e)
-        return jsonify([])
-
-@app.route("/login", methods=["POST"])
-def login():
-    data = request.get_json()
-    senha = data.get("senha", "")
-    if senha == "senha123":  # troque para sua senha real
+@app.route("/verifica_senha", methods=["POST"])
+def verifica_senha():
+    dados = request.get_json()
+    senha = dados.get("senha", "")
+    if senha == "adming3":
         session["logado"] = True
-        session["mensagem"] = "Login efetuado com sucesso!"
-        return jsonify({"sucesso": True})
+        session["mensagem"] = "Bem-vindo à Área Privada!"
+        return jsonify(ok=True)
     else:
-        return jsonify({"sucesso": False})
+        return jsonify(ok=False)
 
 @app.route("/logout")
 def logout():
-    session.pop("logado", None)
-    session["mensagem"] = "Logout efetuado com sucesso!"
+    session.clear()
+    session["mensagem"] = "Sessão encerrada com sucesso."
     return redirect("/")
 
+@app.route("/todas_casas")
+def todas_casas():
+    if not folha_casa:
+        return jsonify([])
+    dados = folha_casa.get_all_records()
+    casas = []
+    for d in dados:
+        casas.append({
+            'id': d.get('ID', ''),
+            'descricao': d.get('Descrição', ''),
+            'morada': d.get('Morada', ''),
+            'latitude': float(d.get('Latitude', 0)),
+            'longitude': float(d.get('Longitude', 0)),
+            'certificado': d.get('Certificado Energético', '').strip(),
+            'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
+        })
+    return jsonify(casas)
+
+@app.route("/get_certificado")
+def get_certificado():
+    if not folha_casa:
+        return jsonify({})
+    lat_c = float(request.args.get("lat", "0"))
+    lng_c = float(request.args.get("lng", "0"))
+    dados = folha_casa.get_all_records()
+    for d in dados:
+        try:
+            lat = float(d.get('Latitude', 0))
+            lng = float(d.get('Longitude', 0))
+        except:
+            continue
+        if abs(lat - lat_c) < 0.0002 and abs(lng - lng_c) < 0.0002:
+            return jsonify({
+                'latitude': lat,
+                'longitude': lng,
+                'descricao': d.get('Descrição', ''),
+                'morada': d.get('Morada', ''),
+                'certificado': d.get('Certificado Energético', '').strip(),
+                'proprietario': d.get('Proprietário', '') if session.get('logado') else '',
+                'id': d.get('ID', '')
+            })
+    return jsonify({})
+
+@app.route("/consumos")
+def consumos():
+    if not folha_consumo:
+        return jsonify([])
+    id_casa = request.args.get("id")
+    if not id_casa:
+        return jsonify([])
+    dados = folha_consumo.get_all_records()
+    consumos = []
+    for d in dados:
+        if str(d.get('ID Casa', '')) == str(id_casa):
+            consumos.append({
+                'tipo': d.get('Tipo Consumo', ''),
+                'periodo': d.get('Período', ''),
+                'valor': d.get('Valor', ''),
+                'unidade': d.get('Unidade', ''),
+                'custo': d.get('Custo (€)', '')
+            })
+    return jsonify(consumos)
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
