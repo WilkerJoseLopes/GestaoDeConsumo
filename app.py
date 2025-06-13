@@ -138,7 +138,7 @@ HTML = """<!DOCTYPE html>
     <button onclick="limparPesquisa()">Limpar Pesquisa</button>
     <br/>
     <select id="filtroClasse" onchange="filtrarPorClasse()">
-      <option value="">Filtrar classes Energéticas</option>
+      <option value="">Filtrar Certificados Energéticas</option>
       <option value="A+">A+</option>
       <option value="A">A</option>
       <option value="A-">A-</option>
