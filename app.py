@@ -202,9 +202,9 @@ const cores = {
 };
 
 function criarIcone(cor){
-  const svg = <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
       <path fill="#${cor}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,28 16,44 16,44 C16,44 1,28 1,16 C1,7.7 7.7,1 16,1 Z"/>
-    </svg>;
+    </svg>`;
   return L.divIcon({
     html: svg,
     className: '',
@@ -228,11 +228,11 @@ function carregarCasas(){
       const cor = cores[casa.certificado.trim()] || cores[''];
       const icon = criarIcone(cor);
       const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
-      let texto = <strong>${casa.morada}</strong><br>${casa.descricao}<br>
+      let texto = `<strong>${casa.morada}</strong><br>${casa.descricao}<br>
                    Latitude: ${casa.latitude.toFixed(5)}<br>
                    Longitude: ${casa.longitude.toFixed(5)}<br>
-                   Certificado: <strong>${casa.certificado}</strong>;
-      if(casa.proprietario) texto += <br><em>Proprietário: ${casa.proprietario}</em>;
+                   Certificado: <strong>${casa.certificado}</strong>`;
+      if(casa.proprietario) texto += `<br><em>Proprietário: ${casa.proprietario}</em>`;
       marker.bindPopup(texto);
       marker.on('click', () => {
         marker.openPopup();
@@ -252,16 +252,16 @@ function carregarConsumos(idCasa){
       consumosDiv.innerHTML = "<p>Nenhum consumo encontrado para esta casa.</p>";
       return;
     }
-    let tabela = <table><thead><tr>
+    let tabela = `<table><thead><tr>
       <th>Tipo</th><th>Período</th><th>Valor</th><th>Custo (€)</th>
-    </tr></thead><tbody>;
+    </tr></thead><tbody>`;
     data.forEach(c=>{
-      tabela += <tr>
+      tabela += `<tr>
         <td>${c.tipo}</td>
         <td>${c.periodo}</td>
         <td>${c.valor} ${c.unidade}</td>
         <td>${c.custo}</td>
-      </tr>;
+      </tr>`;
     });
     tabela += "</tbody></table>";
     consumosDiv.innerHTML = tabela;
@@ -275,17 +275,17 @@ function adicionarMarcador(){
     alert("Por favor, insira valores válidos para latitude e longitude.");
     return;
   }
-  fetch(/get_certificado?lat=${lat}&lng=${lng}).then(r=>r.json()).then(casa=>{
+  fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(casa=>{
     if(casa.latitude && casa.longitude){
       const cor = cores[casa.certificado.trim()] || cores[''];
       const icon = criarIcone(cor);
       limparMarkers();
       const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
-      let texto = <strong>${casa.morada}</strong><br>${casa.descricao}<br>
+      let texto = `<strong>${casa.morada}</strong><br>${casa.descricao}<br>
                    Latitude: ${casa.latitude.toFixed(5)}<br>
                    Longitude: ${casa.longitude.toFixed(5)}<br>
-                   Certificado: <strong>${casa.certificado}</strong>;
-      if(casa.proprietario) texto += <br><em>Proprietário: ${casa.proprietario}</em>;
+                   Certificado: <strong>${casa.certificado}</strong>`;
+      if(casa.proprietario) texto += `<br><em>Proprietário: ${casa.proprietario}</em>`;
       marker.bindPopup(texto).openPopup();
       map.setView([casa.latitude, casa.longitude], 16);
 
