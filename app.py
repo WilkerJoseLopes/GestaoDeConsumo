@@ -80,7 +80,7 @@ HTML = """<!DOCTYPE html>
       user-select:none; 
     }
     .alert {
-      color:geen; font-weight:bold; text-align:center;
+      color:green; font-weight:bold; text-align:center;
       opacity:1;
       transition: opacity 0.7s ease;
     }
@@ -193,354 +193,274 @@ function confirmarLogout(){
 }
 function abrirLogin(){
   document.getElementById("loginModal").style.display = "flex";
+  document.getElementById("senhaInput").value = "";
+  document.getElementById("erroSenha").innerText = "";
+  document.getElementById("senhaInput").focus();
 }
 function fecharLogin(){
   document.getElementById("loginModal").style.display = "none";
-  document.getElementById("senhaInput").value = "";
-  document.getElementById("erroSenha").textContent = "";
 }
 function enviarSenha(){
-  const senha = document.getElementById("senhaInput").value;
-  fetch("/verifica_senha", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({senha})
-  })
-  .then(r=>r.json())
-  .then(res=>{
-    if(res.ok){
+  const senha = document.getElementById("senhaInput").value.trim();
+  if(!senha) {
+    document.getElementById("erroSenha").innerText = "Por favor, digite a senha.";
+    return;
+  }
+  fetch('/verifica_senha', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ senha })
+  }).then(res => res.json())
+  .then(data => {
+    if(data.ok){
       location.reload();
     } else {
-      document.getElementById("erroSenha").textContent = "Senha incorreta!";
+      document.getElementById("erroSenha").innerText = "Senha incorreta.";
     }
   });
 }
 
-const map = L.map('map').setView([41.1578, -8.6291], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-const cores = {
-  'A+':'008000','A':'00AA00','A-':'33BB33','B+':'66CC00','B':'99CC00','B-':'BBD600',
-  'C+':'CCCC00','C':'FFFF00','C-':'FFDD00','D+':'FFB300','D':'FFA500','D-':'FF8800',
-  'E+':'FF6666','E':'FF0000','E-':'CC0000','F+':'A00000','F':'8B0000','F-':'660000',
-  'G+':'444444','G':'000000','G-':'222222','':'0000FF'
-};
-
-function criarIcone(cor){
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-      <path fill="#${cor}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,28 16,44 16,44 C16,44 1,28 1,16 C1,7.7 7.7,1 16,1 Z"/>
-    </svg>`;
-  return L.divIcon({
-    html: svg,
-    className: '',
-    iconSize: [32,45],
-    iconAnchor: [16,44],
-    popupAnchor: [0,-40]
-  });
-}
+const map = L.map('map').setView([-23.517415, -46.422033], 14);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
 
 let markers = [];
+let casasData = [];
+const logado = {{ 'true' if session.get('logado') else 'false' }};
 
-function limparMarkers(){
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
+function corCertificado(cert){
+  switch(cert){
+    case "A+": return "darkgreen";
+    case "A": return "green";
+    case "A-": return "#228B22";
+    case "B+": return "#32CD32";
+    case "B": return "#66CDAA";
+    case "B-": return "#7FFFD4";
+    case "C+": return "#FFFF00";
+    case "C": return "#FFD700";
+    case "C-": return "#FFA500";
+    case "D+": return "#FF8C00";
+    case "D": return "#FF7F50";
+    case "D-": return "#FF6347";
+    case "E+": return "#FF4500";
+    case "E": return "#FF0000";
+    case "E-": return "#DC143C";
+    case "F+": return "#B22222";
+    case "F": return "#8B0000";
+    case "F-": return "#800000";
+    case "G+": return "#4B0082";
+    case "G": return "#2F4F4F";
+    case "G-": return "#000000";
+    default: return "#555555";
+  }
 }
 
-function carregarCasas(){
-  fetch("/todas_casas").then(r=>r.json()).then(data=>{
-    limparMarkers();
-    data.forEach(casa=>{
-      const cor = cores[casa.certificado.trim()] || cores[''];
-      const icon = criarIcone(cor);
-      const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
-      let texto = `<strong>${casa.morada}</strong><br>${casa.descricao}<br>
-                   Latitude: ${casa.latitude.toFixed(5)}<br>
-                   Longitude: ${casa.longitude.toFixed(5)}<br>
-                   Certificado: <strong>${casa.certificado}</strong>`;
-      if(casa.proprietario) texto += `<br><em>Proprietário: ${casa.proprietario}</em>`;
-      marker.bindPopup(texto);
+function carregaCasas(filtro=''){
+  fetch('/todas_casas')
+  .then(res => res.json())
+  .then(data => {
+    casasData = data;
+    limparMarcadores();
+    let contagem = 0;
+    for(let casa of casasData){
+      if(filtro && casa.certificado !== filtro) continue;
+      const cor = corCertificado(casa.certificado);
+      const marker = L.circleMarker([casa.latitude, casa.longitude], {
+        radius: 8,
+        color: cor,
+        fillColor: cor,
+        fillOpacity: 0.9,
+        weight: 2,
+        className: 'markerCertificado'
+      }).addTo(map);
+      marker.bindPopup(`<b>${casa.descricao}</b><br>${casa.morada}<br>Certificado: ${casa.certificado}`);
+      marker.casaId = casa.id;
       marker.on('click', () => {
-        marker.openPopup();
-        if({{ 'true' if session.get('logado') else 'false' }}) {
-          carregarConsumos(casa.id);
+        if(logado){
+          mostrarConsumos(marker.casaId);
+        } else {
+          alert("Para ver os consumos, faça login na Área Privada.");
         }
       });
       markers.push(marker);
-    });
+      contagem++;
+    }
+    if(contagem === 0 && filtro) alert("Nenhuma casa com este certificado.");
   });
 }
 
-function carregarConsumos(idCasa){
-  fetch("/consumos?id="+idCasa).then(r=>r.json()).then(data=>{
-    const consumosDiv = document.getElementById("consumos");
-    if(data.length === 0){
-      consumosDiv.innerHTML = "<p>Nenhum consumo encontrado para esta casa.</p>";
-      return;
-    }
-    let tabela = `<table><thead><tr>
-      <th>Tipo</th><th>Período</th><th>Valor</th><th>Custo (€)</th>
-    </tr></thead><tbody>`;
-    data.forEach(c=>{
-      tabela += `<tr>
-        <td>${c.tipo}</td>
-        <td>${c.periodo}</td>
-        <td>${c.valor} ${c.unidade}</td>
-        <td>${c.custo}</td>
-      </tr>`;
-    });
-    tabela += "</tbody></table>";
-    consumosDiv.innerHTML = tabela;
-  });
+function limparMarcadores(){
+  for(let m of markers){
+    map.removeLayer(m);
+  }
+  markers = [];
+}
+
+function filtrarPorClasse(){
+  const filtro = document.getElementById("filtroClasse").value;
+  carregaCasas(filtro);
+  limparTabelaConsumos();
 }
 
 function adicionarMarcador(){
   const lat = parseFloat(document.getElementById("latitude").value);
   const lng = parseFloat(document.getElementById("longitude").value);
-  if(isNaN(lat) || isNaN(lng)){
-    alert("Por favor, insira valores válidos para latitude e longitude.");
+  if(isNaN(lat) || isNaN(lng)) {
+    alert("Informe coordenadas válidas.");
     return;
   }
-  fetch(`/get_certificado?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(casa=>{
-    if(casa.latitude && casa.longitude){
-      const cor = cores[casa.certificado.trim()] || cores[''];
-      const icon = criarIcone(cor);
-      limparMarkers();
-      const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
-      let texto = `<strong>${casa.morada}</strong><br>${casa.descricao}<br>
-                   Latitude: ${casa.latitude.toFixed(5)}<br>
-                   Longitude: ${casa.longitude.toFixed(5)}<br>
-                   Certificado: <strong>${casa.certificado}</strong>`;
-      if(casa.proprietario) texto += `<br><em>Proprietário: ${casa.proprietario}</em>`;
-      marker.bindPopup(texto).openPopup();
-      map.setView([casa.latitude, casa.longitude], 16);
-
-      if({{ 'true' if session.get('logado') else 'false' }}) {
-        carregarConsumos(casa.id || "");
-      }
-      markers = [marker];
-    } else {
-      alert('Casa não encontrada para as coordenadas dadas.');
-    }
-  });
-}
-function filtrarPorClasse() {
-  const classeSelecionada = document.getElementById("filtroClasse").value;
-  fetch("/todas_casas").then(r=>r.json()).then(data=>{
-    limparMarkers();
-    data.forEach(casa=>{
-      if (!classeSelecionada || casa.certificado.trim() === classeSelecionada) {
-        const cor = cores[casa.certificado.trim()] || cores[''];
-        const icon = criarIcone(cor);
-        const marker = L.marker([casa.latitude, casa.longitude], {icon}).addTo(map);
-        let texto = `<strong>${casa.morada}</strong><br>${casa.descricao}<br>
-                     Latitude: ${casa.latitude.toFixed(5)}<br>
-                     Longitude: ${casa.longitude.toFixed(5)}<br>
-                     Certificado: <strong>${casa.certificado}</strong>`;
-        if (casa.proprietario) texto += `<br><em>Proprietário: ${casa.proprietario}</em>`;
-        marker.bindPopup(texto);
-        marker.on('click', () => {
-          marker.openPopup();
-          if({{ 'true' if session.get('logado') else 'false' }}) {
-            carregarConsumos(casa.id);
-          }
-        });
-        markers.push(marker);
-      }
-    });
-  });
+  map.setView([lat, lng], 17);
+  limparMarcadores();
+  const marker = L.marker([lat, lng]).addTo(map);
+  marker.bindPopup("Coordenadas selecionadas").openPopup();
+  markers.push(marker);
+  limparTabelaConsumos();
 }
 
 function limparPesquisa(){
   document.getElementById("latitude").value = "";
   document.getElementById("longitude").value = "";
-  carregarCasas();
-  map.setView([41.1578, -8.6291], 12); 
-  document.getElementById("consumos").innerHTML = "";  
+  document.getElementById("filtroClasse").value = "";
+  limparMarcadores();
+  carregaCasas();
+  limparTabelaConsumos();
 }
 
-window.onload = function(){
-  carregarCasas();
+function limparTabelaConsumos(){
+  const div = document.getElementById("consumos");
+  if(div) div.innerHTML = "";
+}
 
-  const msg = document.getElementById("mensagem-alert");
-  if(msg){
+function mostrarConsumos(idCasa){
+  fetch(`/consumos?id=${idCasa}`)
+  .then(res => res.json())
+  .then(data => {
+    const div = document.getElementById("consumos");
+    if(!div) return;
+    if(data.length === 0){
+      div.innerHTML = "<p>Não há consumos para esta casa.</p>";
+      return;
+    }
+    // Agrupar por tipo
+    const agrupados = {};
+    for(const c of data){
+      if(!agrupados[c.tipo]) agrupados[c.tipo] = [];
+      agrupados[c.tipo].push(c);
+    }
+
+    let html = `<h2>Consumos da Casa ${idCasa}</h2>`;
+    for(const tipo in agrupados){
+      html += `<h3>${tipo}</h3>`;
+      html += `<table><thead><tr><th>Período</th><th>Valor</th><th>Custo (€)</th></tr></thead><tbody>`;
+      for(const reg of agrupados[tipo]){
+        html += `<tr>
+          <td>${reg.periodo}</td>
+          <td>${reg.valor} ${reg.unidade}</td>
+          <td>${reg.custo}</td>
+        </tr>`;
+      }
+      html += "</tbody></table>";
+    }
+    div.innerHTML = html;
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  carregaCasas();
+  if(document.getElementById("mensagem-alert")){
     setTimeout(() => {
-      msg.style.opacity = "0";
-      setTimeout(() => { msg.remove(); }, 800);
-    }, 3000);
+      document.getElementById("mensagem-alert").style.opacity = 0;
+    }, 4000);
   }
-}
+});
 </script>
-
 </body>
 </html>
 """
 
-#@app.route("/")
-#def index():
-    #return render_template_string(HTML, session=session, mensagem=session.pop('mensagem', ''), logado=session.get('logado', False))
 def get_houses():
     if not folha_casa:
         return []
-    dados = folha_casa.get_all_records()
+    try:
+        dados = folha_casa.get_all_records()
+    except Exception as e:
+        print("Erro ao buscar casas:", e)
+        return []
     casas = []
     for d in dados:
-        casas.append({
-            'id': d.get('ID', ''),
-            'descricao': d.get('Descrição', ''),
-            'morada': d.get('Morada', ''),
-            'latitude': float(d.get('Latitude', 0)),
-            'longitude': float(d.get('Longitude', 0)),
-            'certificado': d.get('Certificado Energético', '').strip(),
-            'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
-        })
+        try:
+            casas.append({
+                "id": str(d.get("ID Casa", "")).strip(),
+                "morada": d.get("Morada", ""),
+                "descricao": d.get("Descrição", ""),
+                "latitude": float(d.get("Latitude", 0)),
+                "longitude": float(d.get("Longitude", 0)),
+                "certificado": d.get("Certificado Energético", "").strip(),
+                "proprietario": d.get("Proprietário", "").strip(),
+            })
+        except Exception as e:
+            print("Erro processar casa:", e)
     return casas
 
-def get_consumptions_for_house(house_id):
-    if not folha_consumo or not house_id:
+def get_consumos(id_casa):
+    if not folha_consumo:
         return []
-    dados = folha_consumo.get_all_records()
+    try:
+        dados = folha_consumo.get_all_records()
+    except Exception as e:
+        print("Erro ao buscar consumos:", e)
+        return []
     consumos = []
     for d in dados:
-        if str(d.get('ID Casa', '')) == str(house_id):
-            consumos.append({
-                'tipo': d.get('Tipo Consumo', ''),
-                'periodo': d.get('Período', ''),
-                'valor': d.get('Valor', ''),
-                'unidade': d.get('Unidade', ''),
-                'custo': d.get('Custo (€)', '')
-            })
+        try:
+            if str(d.get("ID Casa", "")).strip() == str(id_casa).strip():
+                consumos.append({
+                    "tipo": d.get("Tipo Consumo", ""),
+                    "periodo": d.get("Período", ""),
+                    "valor": d.get("Valor", ""),
+                    "unidade": d.get("Unidade", ""),
+                    "custo": d.get("Custo (€)", ""),
+                })
+        except Exception as e:
+            print("Erro processar consumo:", e)
     return consumos
-
-# --- Rota principal ---
 
 @app.route("/")
 def index():
-    houses = get_houses()
-    logged_in = session.get('logado', False)
-    selected_house_id = session.get('selected_house_id')
-    owner_name = session.get('owner_name')
+    mensagem = session.pop('mensagem', '') if 'mensagem' in session else ''
+    return render_template_string(HTML, session=session, mensagem=mensagem)
 
-    info_msg = None
-    if logged_in and not selected_house_id:
-        info_msg = "Clique numa casa para ver os consumos."
+@app.route("/todas_casas")
+def todas_casas():
+    casas = get_houses()
+    return jsonify(casas)
 
-    consumptions = get_consumptions_for_house(selected_house_id) if selected_house_id else []
-
-    return render_template_string(
-        HTML,
-        session=session,
-        mensagem=session.pop('mensagem', ''),
-        logado=logged_in,
-        houses=houses,
-        owner_name=owner_name,
-        selected_house_id=selected_house_id,
-        consumptions=consumptions,
-        info_msg=info_msg
-    )
-
-# --- Rota para verificar senha ---
+@app.route("/consumos")
+def consumos():
+    id_casa = request.args.get("id", "")
+    if not id_casa:
+        return jsonify([])
+    consumos = get_consumos(id_casa)
+    return jsonify(consumos)
 
 @app.route("/verifica_senha", methods=["POST"])
 def verifica_senha():
-    dados = request.get_json()
-    senha = dados.get("senha", "")
-    if senha == "adming3":
-        session["logado"] = True
-        session["mensagem"] = "Bem-vindo à Área Privada!"
-        return jsonify(ok=True)
+    data = request.get_json()
+    senha = data.get("senha", "")
+    senha_correta = os.getenv("SENHA", "senha123")  # Senha padrão para testes
+    if senha == senha_correta:
+        session['logado'] = True
+        return jsonify({"ok": True})
     else:
-        return jsonify(ok=False)
-
-# --- Rota para logout ---
+        return jsonify({"ok": False})
 
 @app.route("/logout")
 def logout():
     session.clear()
-    session["mensagem"] = "Sessão encerrada com sucesso."
+    session['mensagem'] = "Logout efetuado com sucesso!"
     return redirect("/")
 
-# --- Rota para retornar todas casas (JSON) ---
-
-@app.route("/todas_casas")
-def todas_casas():
-    if not folha_casa:
-        return jsonify([])
-    dados = folha_casa.get_all_records()
-    casas = []
-    for d in dados:
-        casas.append({
-            'id': d.get('ID', ''),
-            'descricao': d.get('Descrição', ''),
-            'morada': d.get('Morada', ''),
-            'latitude': float(d.get('Latitude', 0)),
-            'longitude': float(d.get('Longitude', 0)),
-            'certificado': d.get('Certificado Energético', '').strip(),
-            'proprietario': d.get('Proprietário', '') if session.get('logado') else ''
-        })
-    return jsonify(casas)
-
-# --- Rota para pegar certificado pelo lat/lng ---
-
-@app.route("/get_certificado")
-def get_certificado():
-    if not folha_casa:
-        return jsonify({})
-    lat_c = float(request.args.get("lat", "0"))
-    lng_c = float(request.args.get("lng", "0"))
-    dados = folha_casa.get_all_records()
-    for d in dados:
-        try:
-            lat = float(d.get('Latitude', 0))
-            lng = float(d.get('Longitude', 0))
-        except:
-            continue
-        if abs(lat - lat_c) < 0.0002 and abs(lng - lng_c) < 0.0002:
-            return jsonify({
-                'latitude': lat,
-                'longitude': lng,
-                'descricao': d.get('Descrição', ''),
-                'morada': d.get('Morada', ''),
-                'certificado': d.get('Certificado Energético', '').strip(),
-                'proprietario': d.get('Proprietário', '') if session.get('logado') else '',
-                'id': d.get('ID', '')
-            })
-    return jsonify({})
-
-# --- Rota para consumos da casa ---
-
-@app.route("/consumos")
-def consumos():
-    if not folha_consumo:
-        return jsonify([])
-    id_casa = request.args.get("id")
-    if not id_casa:
-        return jsonify([])
-    dados = folha_consumo.get_all_records()
-    consumos = []
-    for d in dados:
-        if str(d.get('ID Casa', '')) == str(id_casa):
-            consumos.append({
-                'tipo': d.get('Tipo Consumo', ''),
-                'periodo': d.get('Período', ''),
-                'valor': d.get('Valor', ''),
-                'unidade': d.get('Unidade', ''),
-                'custo': d.get('Custo (€)', '')
-            })
-    return jsonify(consumos)
-
-# --- Rota para salvar casa selecionada na sessão via AJAX ---
-
-@app.route("/seleciona_casa", methods=["POST"])
-def seleciona_casa():
-    dados = request.get_json()
-    id_casa = dados.get("id_casa")
-    proprietario = dados.get("proprietario")
-    if id_casa:
-        session['selected_house_id'] = id_casa
-        session['owner_name'] = proprietario
-        return jsonify(ok=True)
-    return jsonify(ok=False)
-
 if __name__ == "__main__":
+    # Para rodar localmente
     app.run(debug=True, port=5000)
-    
