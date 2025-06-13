@@ -355,13 +355,7 @@ function limparPesquisa(){
   document.getElementById("longitude").value = "";
   carregarCasas();
   map.setView([41.1578, -8.6291], 12); 
-  document.getElementById("consumos").innerHTML = "";
-  document.getElementById("clear").addEventListener("click", function () {
-    // Resetar o filtro de classes energéticas
-    document.getElementById("filter").value = "";
-
-    // Opcional: disparar o evento de mudança para atualizar os marcadores
-    document.getElementById("filter").dispatchEvent(new Event("change"));
+  document.getElementById("consumos").innerHTML = "";  
 }
 
 window.onload = function(){
@@ -467,3 +461,4 @@ def consumos():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+    
