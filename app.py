@@ -47,6 +47,11 @@ HTML = """<!DOCTYPE html>
       font-size:1rem; color:white; text-decoration:none; cursor:pointer;
     }
     #header-right a:hover {text-decoration:underline;}
+    #logoutBtn {
+      color: #ff4d4d; /* vermelho */
+      font-weight: bold;
+      cursor: pointer;
+    }
     main {
       flex:1; padding:20px; max-width:960px; margin:0 auto;
       width:100%; display:flex; flex-direction:column; gap:20px;
@@ -85,6 +90,8 @@ HTML = """<!DOCTYPE html>
     #loginModalContent {
       background:white; padding:30px; border-radius:10px;
       box-shadow:0 0 20px rgba(0,0,0,0.2); text-align:center;
+      max-width:320px;
+      width:90%;
     }
     #consumos {
       margin-top: 10px;
@@ -105,6 +112,15 @@ HTML = """<!DOCTYPE html>
     th {
       background-color: #0077cc;
       color: white;
+    }
+    #passoAPasso {
+      margin-bottom: 15px;
+      font-size: 1rem;
+      color: #0077cc;
+      background: #e7f0ff;
+      border-left: 5px solid #0077cc;
+      padding: 10px 15px;
+      border-radius: 6px;
     }
     @media (max-width:600px) {
       header {flex-direction:column; align-items:flex-start; gap:10px; padding:1rem;}
@@ -142,6 +158,13 @@ HTML = """<!DOCTYPE html>
 
   {% if session.get('logado') %}
   <div id="consumos">
+    <div id="passoAPasso">
+      <strong>Passo a passo para ver consumos:</strong><br>
+      1. Clique no marcador da casa no mapa.<br>
+      2. Aguarde a tabela de consumos carregar abaixo do mapa.<br>
+      3. Veja os detalhes de água, energia e gás.<br>
+      4. Para outra casa, clique em outro marcador.<br>
+    </div>
     <h2>Consumos da Casa Selecionada</h2>
     <p id="infoConsumo">Clique em um marcador para ver os consumos.</p>
     <table id="tabelaConsumos" style="display:none;">
@@ -193,53 +216,66 @@ function fecharLogin(){
 function enviarSenha(){
   const senha = document.getElementById("senhaInput").value;
   fetch("/verifica_senha", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({senha})
-  })
-  .then(r=>r.json())
-  .then(res=>{
-    if(res.ok){
-      location.reload();
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({senha})
+  }).then(r=>r.json())
+  .then(data=>{
+    if(data.ok){
+      window.location.reload();
     } else {
       document.getElementById("erroSenha").textContent = "Senha incorreta!";
     }
   });
 }
 
-const map = L.map('map').setView([41.1578, -8.6291], 12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-const cores = {
-  'A+':'008000','A':'00AA00','A-':'33BB33','B+':'66CC00','B':'99CC00','B-':'BBD600',
-  'C+':'CCCC00','C':'FFFF00','C-':'FFDD00','D+':'FFB300','D':'FFA500','D-':'FF8800',
-  'E+':'FF6666','E':'FF0000','E-':'CC0000','F+':'A00000','F':'8B0000','F-':'660000',
-  'G+':'444444','G':'000000','G-':'222222','':'0000FF'
+// Faz sumir a mensagem de logout após 3 segundos
+window.onload = function(){
+  const msg = document.getElementById('msgLogout');
+  if(msg){
+    setTimeout(() => {
+      msg.style.opacity = 0;
+      setTimeout(() => { msg.remove(); }, 500);
+    }, 3000);
+  }
 };
 
-function criarIcone(cor){
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
-      <path fill="#${cor}" stroke="black" stroke-width="2" d="M16,1 C24.3,1 31,7.7 31,16 C31,27 16,44 16,44 C16,44 1,27 1,16 C1,7.7 7.7,1 16,1 Z"/>
-    </svg>`;
-  return L.divIcon({html: svg, iconSize:[32,45], iconAnchor:[16,44], popupAnchor:[0,-40], className:''});
-}
+// INICIALIZA MAPA E MARCADORES
+var map = L.map('map').setView([38.71667, -9.13989], 13);
 
-let marcadores = [];
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
 
-fetch('/todas_casas').then(r=>r.json()).then(casas => {
+var marcadores = [];
+
+fetch('/todas_casas')
+.then(r => r.json())
+.then(casas => {
   casas.forEach(c => {
-    const cor = cores[c.certificado.trim()] || cores[''];
-    const icon = criarIcone(cor);
-    const marker = L.marker([c.latitude, c.longitude], {icon}).addTo(map);
-    marker.bindPopup(`<b>${c.descricao}</b><br>${c.morada}<br>Certificado: ${c.certificado}`);
+    const lat = parseFloat(c.latitude);
+    const lng = parseFloat(c.longitude);
+    if(isNaN(lat) || isNaN(lng)) return;
+    const marker = L.marker([lat, lng]).addTo(map);
+
+    // Mostrar popup diferente antes/depois do login
+    let popupConteudo = `<b>${c.descricao}</b><br>${c.morada}<br>Latitude: ${lat.toFixed(5)}<br>Longitude: ${lng.toFixed(5)}<br>Certificado: ${c.certificado}`;
+    {% raw %}
+    if({{ 'true' if session.get('logado') else 'false' }}){
+      popupConteudo += `<br><b>Proprietário: Proprietário</b>`;
+    }
+    {% endraw %}
+    marker.bindPopup(popupConteudo);
+
     marker.casaId = c.id;
     marcadores.push(marker);
 
     marker.on('click', function(){
+      {% raw %}
       if({{ 'true' if session.get('logado') else 'false' }}) {
         mostrarConsumos(this.casaId);
       }
+      {% endraw %}
     });
   });
 });
@@ -278,17 +314,6 @@ function mostrarConsumos(idCasa){
     tabela.style.display = "table";
   });
 }
-
-// Faz sumir a mensagem de logout após 3 segundos
-window.onload = function(){
-  const msg = document.getElementById('msgLogout');
-  if(msg){
-    setTimeout(() => {
-      msg.style.opacity = 0;
-      setTimeout(() => { msg.remove(); }, 500);
-    }, 3000);
-  }
-};
 </script>
 </body>
 </html>"""
@@ -350,8 +375,7 @@ def consumos(id_casa):
 def verifica_senha():
     data = request.json
     senha = data.get('senha', '')
-    # Defina a senha aqui:
-    senha_correta = "senha123"
+    senha_correta = "Adming3"
     if senha == senha_correta:
         session['logado'] = True
         session['usuario'] = 'Proprietário'
