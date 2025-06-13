@@ -14,8 +14,6 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 GOOGLE_CREDENTIALS = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
 creds = Credentials.from_service_account_info(GOOGLE_CREDENTIALS, scopes=SCOPES)
 client = gspread.authorize(creds)
-
-sheet = client.open("GestaoCasas")
 casas_sheet = sheet.worksheet("Dados Casa")
 consumos_sheet = sheet.worksheet("Dados Consumos")
 
