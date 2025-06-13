@@ -135,6 +135,7 @@ HTML = """<!DOCTYPE html>
     <input type="number" id="latitude" step="any" placeholder="Latitude"/>
     <input type="number" id="longitude" step="any" placeholder="Longitude"/>
     <button onclick="adicionarMarcador()">Mostrar no Mapa</button>
+    <button onclick="limparPesquisa()">Limpar Pesquisa</button>
   </div>
   <div id="map"></div>
 
@@ -296,6 +297,14 @@ function adicionarMarcador(){
       alert('Casa não encontrada para as coordenadas dadas.');
     }
   });
+}
+
+function limparPesquisa(){
+  document.getElementById("latitude").value = "";
+  document.getElementById("longitude").value = "";
+  carregarCasas();  // Recarrega todos os marcadores
+  map.setView([41.1578, -8.6291], 12); 
+  document.getElementById("consumos").innerHTML = "";  
 }
 
 window.onload = function(){
