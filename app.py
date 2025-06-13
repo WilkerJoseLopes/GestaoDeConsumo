@@ -169,6 +169,11 @@ HTML = """<!DOCTYPE html>
       <option value="G-">G-</option>
     </select>
   </div>
+  {% if session.get('logado') %}
+  <div style="text-align: center; background-color: #e6f2ff; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+    <strong>Instrução:</strong> Clique em qualquer marcador no mapa para visualizar os consumos detalhados abaixo.
+  </div>
+{% endif %}
   <div id="map"></div>
 
   {% if session.get('logado') %}
