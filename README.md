@@ -33,7 +33,7 @@ Nesta fase, o foco foi a implementação de um mapa interativo hospedado no Rend
 
 Para acessar a área privada do sistema, utilize a seguinte senha:
 
-**Senha:** `Adming3`
+**Senha:** `adming3`
 
 ## 🎯 Escala de Avaliação do Certificado Energético
 
